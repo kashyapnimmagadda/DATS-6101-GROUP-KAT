@@ -24,25 +24,32 @@ library(gridExtra)
 library(corrplot)
 library(ROSE)
 library(dplyr)
+library(ggcorrplot)
 
 ```
+
 # Loading the dataset
 ```{r load_csv, include=TRUE, echo=TRUE}
 # reading the dataset
-stroke_df <- read.csv("C:/Data Science/DATS-6101-GROUP-KAT-main/DATS-6101-GROUP-KAT-main/DataSet/framingham.csv", header = TRUE)
+# stroke_df <- read.csv("C:/Users/Admin/OneDrive/Desktop/DataSet/framingham.csv", header = TRUE)
+
+github_file_path <- "https://raw.githubusercontent.com/kashyapnimmagadda/DATS-6101-GROUP-KAT/main/DataSet/framingham.csv"
+stroke_df <- read.csv(url(github_file_path))
 stroke_df
 ```
+
 
 ```{r desc, include=TRUE, echo=TRUE}
 # structure of the dataset
 str(stroke_df)
 ```
+
 # Data Cleaning and summary of the dataset
 ```{r data_cleaning, include=TRUE, echo=TRUE}
 
 colnames(stroke_df)[1] <- "gender"
-stroke_df$gender[stroke_df$gender == "0"] <- "F"
-stroke_df$gender[stroke_df$gender == "1"] <- "M"
+#stroke_df$gender[stroke_df$gender == "0"] <- "F"
+#stroke_df$gender[stroke_df$gender == "1"] <- "M"
 # converting the numeric variables to factor variables
 stroke_df$gender = as.factor(stroke_df$gender)
 stroke_df$education = as.factor(stroke_df$education)
@@ -62,6 +69,7 @@ summary(stroke_df)
 
 ```{r find_na_fix, include=TRUE, echo=TRUE}
 # To find the NA's in the dataset
+colnames(stroke_df)[1] <- "gender"
 paste("The NA's in the dataset is:",sum(is.na(stroke_df)))
 
 ```
@@ -83,11 +91,16 @@ stroke_df$cigsPerDay[is.na(stroke_df$cigsPerDay)] = mean(stroke_df$cigsPerDay,na
 # Replacing NA values with average totChol value
 stroke_df$totChol[is.na(stroke_df$totChol)] = mean(stroke_df$totChol,na.rm = TRUE)
 
-# Replacing education NA values with Unknown value
-stroke_df$education <- ifelse(is.na(stroke_df$education), "Unknown", stroke_df$education)
+# Replacing education NA values with mean value
+stroke_df$education[is.na(stroke_df$education)] = mean(stroke_df$education, na.rm = TRUE)
+#stroke_df$education <- ifelse(is.na(stroke_df$education), "Unknown", stroke_df$education)
 
-# Replacing BPMeds NA values with Unknown value
-stroke_df$BPMeds <- ifelse(is.na(stroke_df$BPMeds), "Unknown", stroke_df$BPMeds)
+stroke_df$education <- as.integer(stroke_df$education)
+stroke_df$BPMeds<- as.integer(stroke_df$BPMeds)
+
+# Replacing BPMeds NA values with mean value
+stroke_df$BPMeds[is.na(stroke_df$BPMeds)] = mean(stroke_df$BPMeds, na.rm = TRUE)
+#stroke_df$BPMeds <- ifelse(is.na(stroke_df$BPMeds), "Unknown", stroke_df$BPMeds)
 
 paste("The NA's in the dataset after replacing values is:",sum(is.na(stroke_df)))
 ```
@@ -96,8 +109,8 @@ paste("The NA's in the dataset after replacing values is:",sum(is.na(stroke_df))
 # subsetting the data for various analyses 
 stroke_1 = subset(stroke_df, prevalentStroke == 1)
 stroke_0 = subset(stroke_df, prevalentStroke == 0)
-stroke_1_female = subset(stroke_df, prevalentStroke == 1 & gender == "Female")
-stroke_1_male = subset(stroke_df, prevalentStroke == 1 & gender == "Male")
+#stroke_1_female = subset(stroke_df, prevalentStroke == 1 & gender == "Female")
+#stroke_1_male = subset(stroke_df, prevalentStroke == 1 & gender == "Male")
 
 # creating different columns for bmi, age and average_glucose_level based on different bucketing for each variables
 dat <- within(stroke_df, {   
@@ -132,31 +145,74 @@ dat$age.cat<- factor(dat$age.cat,levels= c("Under 20","20-40","40-60","60-80","a
 summary(stroke_df)
 ```
 
+```{r}
+head(stroke_df)
+```
 
+# Correlation plots
 
 ```{r}
+## Correlation Heat map
+cor=round(cor(stroke_df), 1)
+ggcorrplot(cor, title="Correlation for Heart Stroke dataset",lab=TRUE,lab_size = 2)
+
+```
+
+```{r}
+# Count of Males and Females in the Dataset
+ggplot(stroke_df, aes(x=gender,fill=gender)) + 
+  geom_bar() + 
+  ggtitle("Count of Male and Female in the Dataset") + 
+  theme_bw() + theme()+ xlab("Gender") + ylab("People Count")
+
 #This plot indicates count of people of particular age group. 
 ggplot(stroke_df, aes(x = age)) + 
   geom_histogram(binwidth = 0.6, aes(fill = ..count..)) + 
   scale_fill_gradient('Count', low = 'blue', high = 'red') + 
-  labs(x = "Age of Patient", y = "Patient Count", title = "Age Frequency Histogram")
+  labs(x = "Age Groups", y = "Patient Count", title = "Age Frequency Histogram")
 
-ggplot(stroke_df, aes(x=BMI)) +  geom_density(fill="pink", color="pink", alpha=0.5)+ theme_bw() + theme()+ ggtitle("Distribution for BMI")
+ggplot(stroke_df, aes(x=BMI)) + 
+  geom_density(fill="pink", color="pink", alpha=0.5) + 
+  theme_bw() + theme()+ ggtitle("Distribution for BMI")
 
 ggplot(stroke_df, aes(x = glucose)) + 
   geom_histogram(binwidth = 2.0, aes(fill = ..count..)) + 
   scale_fill_gradient('Count', low = 'blue', high = 'red') + 
-  labs(x = "Age of Patient", y = "Patient Count", title = "Age Frequency Histogram")
+  labs(x = "Glucose level", y = "Patient Count", title = "Diabetes vs Patient Histogram.")
 
-# Count of Males and Females in the Dataset
-ggplot(stroke_df, aes(x=gender,fill=gender))+geom_bar()+ggtitle("Count of Male and Female in the Dataset")+ theme_bw() +
-  theme()+ xlab("Gender") + ylab("Count of people")
-```
-
-```{r}
-
-#To do implementation
 ```
 
 
+## Distribution of the target variable 
+```{r target_var, include=TRUE, echo=TRUE}
 
+ggplot(stroke_df, aes(x = TenYearCHD, fill = TenYearCHD)) + 
+  geom_bar() + 
+  ggtitle("Distribution of Target variable (TenYearCHD)") + 
+  theme_bw() + theme()+ xlab("TenYearCHD") + ylab("Count of people")
+```
+## Does diabetes, BMI and Smoking status cause stroke?
+
+```{r work_type, include=TRUE}
+
+# Seeing if work type affects people
+
+ggplot(stroke_df, aes(x=diabetes, fill = TenYearCHD)) + 
+  geom_bar(position = "dodge") + 
+  ggtitle("Diabetes Vs Stroke (TenYearCHD)") + 
+  theme_bw() + theme() + xlab("Diabetes") + ylab("Count of people who had a stroke")
+
+
+# Seeing if Smoking status causes stroke
+ggplot(stroke_df,aes(x=currentSmoker, fill=TenYearCHD)) + 
+  geom_bar(position = "dodge") + 
+  ggtitle("Smoking status Vs Stroke") + 
+  theme_bw() + theme() + xlab("Smoking Status") + ylab("Count of people who had a stroke")
+
+
+# BMI vs stroke 
+ggplot(stroke_df, aes(x=BMI, fill=TenYearCHD)) + 
+  geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity') + 
+  theme_bw() + theme()+ggtitle("BMI vs TenYearCHD")
+
+```
