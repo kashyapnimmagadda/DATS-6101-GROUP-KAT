@@ -24,36 +24,41 @@ library(gridExtra)
 library(corrplot)
 library(ROSE)
 library(dplyr)
-
+library(ggcorrplot)
 ```
 
 # Loading the dataset
 ```{r load_csv, include=TRUE, echo=TRUE}
-# reading the dataset
-stroke_df <- read.csv("C:/Users/Admin/OneDrive/Desktop/Project - KAT/DataSet/framingham.csv", header = TRUE)
-stroke_df        
+# reading the dataset from github repository
+github_file_path <- "https://raw.githubusercontent.com/kashyapnimmagadda/DATS-6101-GROUP-KAT/main/DataSet/framingham.csv"
+stroke_df <- read.csv(url(github_file_path))
+stroke_df
 ```
 
 ```{r desc, include=TRUE, echo=TRUE}
 # structure of the dataset
 str(stroke_df)
 ```
-
 # Data Cleaning and summary of the dataset
 ```{r data_cleaning, include=TRUE, echo=TRUE}
 
+stroke_df <- stroke_df[, -which(names(stroke_df) == "education")]
+stroke_df <- stroke_df[, -which(names(stroke_df) == "heartRate")]
+
+names(stroke_df)[names(stroke_df) == "TenYearCHD"] <- "stroke"
 colnames(stroke_df)[1] <- "gender"
+
 stroke_df$gender[stroke_df$gender == "0"] <- "F"
 stroke_df$gender[stroke_df$gender == "1"] <- "M"
+
 # converting the numeric variables to factor variables
 stroke_df$gender = as.factor(stroke_df$gender)
-stroke_df$education = as.factor(stroke_df$education)
 stroke_df$currentSmoker = as.factor(stroke_df$currentSmoker)
 stroke_df$BPMeds = as.factor(stroke_df$BPMeds)
 stroke_df$prevalentStroke = as.factor(stroke_df$prevalentStroke)
 stroke_df$prevalentHyp = as.factor(stroke_df$prevalentHyp)
 stroke_df$diabetes = as.factor(stroke_df$diabetes)
-stroke_df$TenYearCHD = as.factor(stroke_df$TenYearCHD)
+stroke_df$stroke = as.factor(stroke_df$stroke)
 stroke_df$BMI = as.numeric(stroke_df$BMI)
 
 # To get the summary statistics of the dataset
@@ -65,41 +70,32 @@ summary(stroke_df)
 ```{r find_na_fix, include=TRUE, echo=TRUE}
 # To find the NA's in the dataset
 paste("The NA's in the dataset is:",sum(is.na(stroke_df)))
-
 ```
 
 ```{r na_fix, include=TRUE, echo=TRUE}
-
 # Replacing NA values with average BMI value
 stroke_df$BMI[is.na(stroke_df$BMI)] = mean(stroke_df$BMI,na.rm = TRUE)
-
 # Replacing NA values with average glucose value
 stroke_df$glucose[is.na(stroke_df$glucose)] = mean(stroke_df$glucose,na.rm = TRUE)
-
-# Replacing NA values with average heartRate value
-stroke_df$heartRate[is.na(stroke_df$heartRate)] = mean(stroke_df$heartRate,na.rm = TRUE)
-
 # Replacing NA values with average cigsPerDay value
 stroke_df$cigsPerDay[is.na(stroke_df$cigsPerDay)] = mean(stroke_df$cigsPerDay,na.rm = TRUE)
-
 # Replacing NA values with average totChol value
 stroke_df$totChol[is.na(stroke_df$totChol)] = mean(stroke_df$totChol,na.rm = TRUE)
-
-# Replacing education NA values with Unknown value
-stroke_df$education <- ifelse(is.na(stroke_df$education), "Unknown", stroke_df$education)
-
+stroke_df$BPMeds<- as.integer(stroke_df$BPMeds)
 # Replacing BPMeds NA values with Unknown value
 stroke_df$BPMeds <- ifelse(is.na(stroke_df$BPMeds), "Unknown", stroke_df$BPMeds)
-
+# Replacing BPMeds NA values with mean value
+stroke_df$BPMeds[is.na(stroke_df$BPMeds)] = mean(stroke_df$BPMeds, na.rm = TRUE)
+#stroke_df$BPMeds <- ifelse(is.na(stroke_df$BPMeds), "Unknown", stroke_df$BPMeds)
 paste("The NA's in the dataset after replacing values is:",sum(is.na(stroke_df)))
 ```
 
 ```{r subsets, include=TRUE, echo=TRUE}
 # subsetting the data for various analyses 
-stroke_1 = subset(stroke_df, prevalentStroke == 1)
-stroke_0 = subset(stroke_df, prevalentStroke == 0)
-stroke_1_female = subset(stroke_df, prevalentStroke == 1 & gender == "F")
-stroke_1_male = subset(stroke_df, prevalentStroke == 1 & gender == "M")
+stroke_1 = subset(stroke_df, stroke == 1)
+stroke_0 = subset(stroke_df, stroke == 0)
+stroke_1_female = subset(stroke_df, stroke == 1 & gender == "F")
+stroke_1_male = subset(stroke_df, stroke == 1 & gender == "M")
 
 # creating different columns for bmi, age and average_glucose_level based on different bucketing for each variables
 dat <- within(stroke_df, {   
@@ -128,6 +124,11 @@ dat$gluc.cat<- factor(dat$gluc.cat,levels= c("Below 60","60 - 90","90 - 120","12
 dat$age.cat<- factor(dat$age.cat,levels= c("Under 20","20-40","40-60","60-80","above 80"))
 ```
 
+```{r}
+head(stroke_df)
+```
+
+#Plots
 ```{r variable_dist, include=TRUE, echo=TRUE}
 # creating density plots to see the distribution of the numerical variables
 
@@ -141,112 +142,78 @@ ggplot(stroke_df, aes(x=glucose)) +  geom_density(fill="lightgreen", color="ligh
 ggplot(stroke_df, aes(x=gender,fill=gender))+geom_bar()+ggtitle("Count of Male and Female in the Dataset")+ theme_bw() +
   theme()+ xlab("Gender") + ylab("Count of people")
 ```
+
 ## Distribution of the target variable 
-```{r}
-
-```
-
 ```{r target_var, include=TRUE, echo=TRUE}
-ggplot(stroke_df, aes(x=TenYearCHD,fill=TenYearCHD))+geom_bar()+ggtitle("Distribution of Target variable (TenYearCHD)")+ theme_bw() + theme()+ xlab("TenYearCHD") + ylab("Count of people")
+ggplot(stroke_df, aes(x = stroke)) + 
+  geom_bar(aes(fill = ..count..)) + 
+  scale_fill_gradient('Count', low = "#F0E442", high = '#999999') + 
+  labs(x = "stroke", y = "Count of People", title = "Distribution of Target variable (stroke)")
 ```
-## Does Work type, BMI and Smoking status cause stroke?
 
-```{r work_type, include=TRUE}
-
-# Seeing if work type affects people
-ggplot(stroke_df,aes(x=sysBP, fill=TenYearCHD),bins = 30)+geom_bar(position = "dodge")+ggtitle("sysBP Vs Stroke")+ theme_bw() +
-  theme()+ xlab("sysBP") + ylab("Count of people who had a stroke")
-# Seeing if Diabetes causes stroke
-ggplot(stroke_df,aes(x=diabetes, fill=TenYearCHD))+geom_bar(position = "dodge")+ggtitle("Diabetes Vs Stroke")+ theme_bw() + theme()+ xlab("Diabetes") + ylab("Count of people who had a stroke")
 # BMI vs stroke 
-ggplot(stroke_df, aes(x=BMI, fill=TenYearCHD)) + geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity')+ theme_bw() + theme()+ggtitle("BMI vs Stroke")
-```
-## Distribution of people who suffered stroke due to their smoking habit and work type 
-
-```{r job_smoking, include=TRUE, echo=TRUE}
-#errrrorrrr
-# work type and smoking habits does it cause stroke?
-ggplot(stroke_1,aes(x=dat$BMI.cat, fill= currentSmoker))+geom_bar(position = "dodge")+ggtitle("Distribution of people who had a stroke based on their smoking habits")+ theme_bw() + theme()+ xlab("Work type") + ylab("Count of people ")
-```
-### Does it depend based on the gender?
-```{r gender_job_smoking, include=TRUE, echo=TRUE}
-# seeing if gender has any affect on stroke based on smoking and work type
-# erroorrr
-ggplot(stroke_1_female,aes(x=work_type, fill= currentSmoker))+geom_bar(position = "dodge")+ggtitle("Distribution of females who had a stroke based on their smoking habits")+ theme_bw() + theme()+ xlab("Work type") + ylab("Count of people ")
-
-ggplot(stroke_1_male,aes(x=work_type, fill= currentSmoker))+geom_bar(position = "dodge")+ggtitle("Distribution of males who had a stroke based on their smoking habits")+ theme_bw() + theme()+ xlab("Work type") + ylab("Count of people ")
-```
-
 ```{r}
-#Relcaing all Null values with 0
-#stroke_df[is.na(stroke_df)] <- 0
-summary(stroke_df)
+ggplot(stroke_df, aes(x=BMI, fill=stroke)) + geom_histogram( color="#e9ecef", alpha=0.6, position = 'identity')+ theme_bw() + theme()+ggtitle("BMI vs Stroke")
 ```
 
-
-
-The above graph only includes those who have had a stroke, and we can see from the graph that most people in the private sector and self-employed have had a stroke, and it's worth noting that the two major causes of stroke were those who had never smoked and those who had formerly smoked.
-
 ### Does it depend based on the gender?
-
 ```{r gender_job_smoking, include=TRUE, echo=TRUE}
 # seeing if gender has any affect on stroke based on smoking and work type
 ggplot(stroke_1_female,aes(x=age, fill= currentSmoker))+geom_bar(position = "dodge")+ggtitle("Distribution of females who had a stroke based on their smoking habits")+ theme_bw() + theme()+ xlab("Age") + ylab("Count of people ")
 
 ggplot(stroke_1_male,aes(x=age, fill= currentSmoker))+geom_bar(position = "dodge")+ggtitle("Distribution of males who had a stroke based on their smoking habits")+ theme_bw() + theme()+ xlab("Age") + ylab("Count of people ")
 ```
+As seen in the graph above, the key causes that caused a stroke in females were never smoked and formerly smoked, whereas in males, the reason for stroke was formerly smoked and smokes.
+```{r}
+#To see if these variables are dependent we did a chi square test.
 
-As seen in the graph above, the key causes that caused a stroke in females were never smoked and formerly smoked, whereas in males, the reason for stroke was formerly smoked and smokes in the private sector, and formerly smoked and never smoked in the self-employed sector.
+chisq.test(stroke_df$stroke, stroke_df$gender)
+chisq.test(stroke_df$stroke, stroke_df$currentSmoker)
+chisq.test(stroke_df$stroke, stroke_df$BPMeds)
+chisq.test(stroke_df$stroke, stroke_df$prevalentStroke)
+chisq.test(stroke_df$stroke, stroke_df$prevalentHyp)
+chisq.test(stroke_df$stroke, stroke_df$diabetes)
 
-To see if these variables are dependent we did a chi square test.
+# t-test for totChol
+t.test(totChol ~ stroke, data = stroke_df)
 
-```{r chi_test, include=TRUE, echo=TRUE}
-#ctest2 = chisq.test(dat$work_type, dat$stroke)
-#ctest2
-# Conduct a two-sample independent t-test
-result <- t.test(dat$currentSmoker, dat$TenYearCHD)
+# t-test for sysBP
+t.test(sysBP ~ stroke, data = stroke_df)
 
-# Print the result
-print(result)
+# t-test for diaBP
+t.test(diaBP ~ stroke, data = stroke_df)
+
+# t-test for BMI
+t.test(BMI ~ stroke, data = stroke_df)
+
+# t-test for glucose
+t.test(glucose ~ stroke, data = stroke_df, var.equal = FALSE)
+
+#As we can see from the results, the p values for both tests are less than 0.05, thus we can fail to accept the null hypothesis and infer that smoking status and work type are related to stroke.
 ```
-
-As we can see from the results, the p values for both tests are less than 0.05, thus we can fail to accept the null hypothesis and infer that smoking status and work type are related to stroke.
-
-## Does age have any affect on stroke?
 
 ```{r age_stroke_1, include=TRUE, echo=TRUE}
 # seeing if age has effect in stroke
-ggplot(stroke_1, aes(x = age, fill=TenYearCHD))+ geom_density(alpha = 0.3)+ ggtitle("Density plot for age of people who had stroke")+ theme_bw() + theme()
+#FIX
+ggplot(stroke_1, aes(x = age, fill=stroke))+ geom_density(alpha = 0.3)+ ggtitle("Density plot for age of people who had stroke")+ theme_bw() + theme()
 ```
-
 In general, we know that as one gets older, the likelihood of contracting an illness increases. We wanted to see if this statement held true with our dataset. The above graph clearly shows that as one's age grows, the likelihood of having a stroke increases.
-
-We chose the ANOVA test because we wanted to examine if age played a role in a person suffering from stroke.
-```{r anova_test, include=TRUE, echo=TRUE}
-one.way <- aov(age ~ TenYearCHD, data = stroke_df)
-summary(one.way)
-```
-The ANOVA test result indicates that the p value is less than 0.05 and it is very significant, implying that as age increases, the likelihood of having a stroke increases regardless of gender.
 
 ### Does BMI with age cause stroke?
 ```{r age_bmi, include=TRUE, echo=TRUE}
 
 # how bmi and age is stroke in people 
-ggplot(stroke_1, aes(x=BMI, y=age, color=TenYearCHD))+geom_point(size=3)+ ggtitle("Scatter plot for age vs bmi for people who had a stroke")
+ggplot(stroke_1, aes(x=BMI, y=age, color=stroke))+geom_point(size=3)+ ggtitle("Scatter plot for age vs bmi for people who had a stroke")
 
-ggplot(stroke_0, aes(x=BMI, y=age, color=TenYearCHD))+geom_point(size=3)+ggtitle("Scatter plot for age vs bmi for people who didnt have a stroke")
-
-
-ggplot(stroke_1, aes(x=BMI, y=age, color=TenYearCHD))+geom_boxplot(fill = "skyblue")+ ggtitle("Box plot for age vs bmi for people who had a stroke")
+ggplot(stroke_0, aes(x=BMI, y=age, color=stroke))+geom_point(size=3)+ggtitle("Scatter plot for age vs bmi for people who didnt have a stroke")
 
 
-ggplot(stroke_0, aes(x=BMI, y=age, color=TenYearCHD))+geom_boxplot(fill = "skyblue")+ ggtitle("Box plot for age vs bmi for people who didnt have a stroke")
+ggplot(stroke_1, aes(x=BMI, y=age, color=stroke))+geom_boxplot(fill = "skyblue")+ ggtitle("Box plot for age vs bmi for people who had a stroke")
 
-# we can see 25 % to 75 % who get stroke are from age 60 - 80 
-# we can see become who have bmi from 27.5 to 32.6 have higher chances of stroke
+
+ggplot(stroke_0, aes(x=BMI, y=age, color=stroke))+geom_boxplot(fill = "skyblue")+ ggtitle("Box plot for age vs bmi for people who didnt have a stroke")
+
 ```
-
-
 The categories are encoded as:
 
 - Underweight - BMI < 18.5
@@ -258,49 +225,33 @@ The categories are encoded as:
 ```{r age_bmi.cat, include=TRUE, echo=TRUE}
 
 # boxplot to see if bmi along with age has anything to do with stroke
-ggplot(dat, aes(x=BMI.cat,y = age, fill=TenYearCHD))+geom_boxplot()+ ggtitle("Boxplot for Age vs BMI(categorical)")
+ggplot(dat, aes(x=BMI.cat,y = age, fill=stroke))+geom_boxplot()+ ggtitle("Boxplot for Age vs BMI(categorical)")
 
 ```
-
-
 ### Does age with average glucose level affect stroke?
 ```{r age_avg_glucose, include=TRUE, echo=TRUE}
 # seeing if average glucose level with age has an effect on stroke
-stroke_1_dat = subset(dat, TenYearCHD==1 )
-ggplot(stroke_1_dat, aes(fill=TenYearCHD, y = age, x = gluc.cat))+ geom_boxplot()+ ggtitle("Boxplot for Age vs Average Gluclose level(Categorical) for people with stroke")
+stroke_1_dat = subset(dat, stroke==1 )
+ggplot(stroke_1_dat, aes(fill=stroke, y = age, x = gluc.cat))+ geom_boxplot()+ ggtitle("Boxplot for Age vs Average Gluclose level(Categorical) for people with stroke")
 ```
-
 ### Does age cause hypertension?
 
 ```{r age_hypertension, include=TRUE, echo=TRUE}
 # seeing if a person can get hypertension with age 
-ggplot(data = stroke_df, aes(x=as.character(prevalentHyp), y=age, fill=TenYearCHD)) +
+ggplot(data = stroke_df, aes(x=as.character(prevalentHyp), y=age, fill=stroke)) +
     geom_boxplot() +
     labs(title="Age distribution by hypertension", x="hypertension", y="age")
 ```
 
-
-
-
-
 ```{r}
-ggplot(dat, aes(x = BMI.cat, fill = TenYearCHD)) + 
+ggplot(dat, aes(x = BMI.cat, fill = stroke)) + 
   geom_bar() + 
   labs(x = "BMI Category", y = "Count", title = "Distribution of Stroke Cases by BMI Category")
 
 ```
 
-
-
-
-# ```{r}
-# ggplot(stroke_df, aes(x = glucose, y = TenYearCHD, fill = TenYearCHD)) + 
-#   geom_boxplot() +
-#   labs(x = "Stroke", y = "Glucose Level", title = "Distribution of Glucose Levels by Stroke Status")
-# ```
-
 ```{r}
-ggplot(stroke_df, aes(x = age, fill = TenYearCHD)) +
+ggplot(stroke_df, aes(x = age, fill = stroke)) +
   geom_histogram(binwidth = 5, position = "dodge") +
   labs(x = "Age", y = "Count", title = "Distribution of Age by Stroke Status") +
   scale_x_continuous(breaks = seq(0, 100, by = 5))
@@ -308,52 +259,12 @@ ggplot(stroke_df, aes(x = age, fill = TenYearCHD)) +
 ```
 
 ```{r}
-ggplot(stroke_df, aes(x = BMI, y = glucose, color = TenYearCHD)) +
+ggplot(stroke_df, aes(x = BMI, y = glucose, color = stroke)) +
   geom_point(alpha = 0.7) +
   labs(x = "BMI", y = "Glucose Level", title = "Relationship between BMI and Glucose Levels") +
   scale_color_manual(values = c("gray", "red"))
 
 ```
-
-```{r}
-ggplot(stroke_df, aes(x = gender, fill = TenYearCHD)) +
-  geom_bar(position = "stack") +
-  labs(x = "Gender", y = "Count", title = "Distribution of Stroke Events by Gender") +
-  scale_fill_manual(values = c("gray", "red"), name = "Stroke", labels = c("No", "Yes"))
-
-```
-
-# ```{r}
-# ggplot(dat, aes(x = currentSmoker, fill = TenYearCHD)) +
-#   geom_bar(position = "dodge") +
-#   labs(x = "Smoking Status", y = "Count", title = "Count of Stroke Events by Smoking Status") +
-#   scale_fill_manual(values = c("gray", "red"), name = "Stroke", labels = c("No", "Yes"))
-# 
-# ```
-
-# ```{r}
-# ggplot(dat, aes(x = glucose, fill = TenYearCHD)) + 
-#   geom_density(alpha = 0.5) +
-#   labs(x = "Glucose Level", y = "Density", title = "Distribution of Glucose Levels for Stroke Cases")
-#  
-# str(dat)
-# ```
-
-```{r}
-library(ggplot2)
-ggplot(dat, aes(x=gender, y=totChol)) + 
-  geom_boxplot() +
-  labs(title="Box plot of total cholesterol by gender", x="Gender", y="Total cholesterol")
-
-```
-
-# ```{r}
-#  ggplot(dat, aes(x=BMI, fill=age.cat)) +
-#    geom_density(alpha=0.6) +
-#    labs(title="Density plot of BMI by age category", x="BMI", y="Density") +
-#    scale_fill_discrete(name="Age category")
-# 
-# ```
 
 ```{r}
 ggplot(dat, aes(x=sysBP, y=diaBP, color=age)) +
@@ -363,50 +274,8 @@ ggplot(dat, aes(x=sysBP, y=diaBP, color=age)) +
 
 ```
 
-
-# ```{r}
-# ggplot(dat, aes(x = currentSmoker, fill = TenYearCHD)) + 
-#   geom_bar() + 
-#   ggtitle("Smoking Status and Ten-Year CHD Stacked Barplot")
-# 
-# ```
-
 ```{r}
-ggplot(dat, aes(x = gender, y = totChol, fill = TenYearCHD)) + 
-  geom_boxplot() + 
-  ggtitle("Total Cholesterol by Gender")
-
-
-```
-
-```{r}
-ggplot(stroke_dat, aes(x = age.cat, fill = TenYearCHD)) + 
-  geom_bar() + 
-  ggtitle("Ten-Year CHD by Age Category")
-
-```
-
-```{r}
-ggplot(dat, aes(x = gluc.cat, fill = TenYearCHD)) + 
+ggplot(dat, aes(x = gluc.cat, fill = stroke)) + 
   geom_bar() + 
   ggtitle("Ten-Year CHD and Glucose Category Stacked Barplot")
-
 ```
-
-```{r}
-ggplot(dat, aes(x = age, y = diaBP, color = prevalentHyp)) + 
-  geom_point() + 
-  ggtitle("Age vs. Diastolic Blood Pressure with Prevalent Hypertension as Color")
-  
-```
-```{r}
-
-# Perform t-tests for each variable with TenYearCHD as the target variable
-t_test_results <- lapply(stroke_df[,1:15], function(x) t.test(x ~ stroke_df$TenYearCHD))
-
-# Print the results
-names(t_test_results) <- names(stroke_df)[1:15]
-t_test_results
-
-```
-
