@@ -1,0 +1,539 @@
+---
+title: "Heart Stroke Prediction"
+author: "Team KAT"
+date: "`r Sys.Date()`"
+output:  
+      rmdformats::readthedown:
+        toc_float: true
+        number_sections: true
+        includes:
+          before_body: header.html
+      
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+options(scipen = 999,  digits = 3, big.mark=",", warn = -1)
+```
+
+```{r basicfunct, include=FALSE}
+loadPkg = function(x) 
+{ if (!require(x,character.only=T, quietly =T)) 
+  { install.packages(x,dep=T,repos="http://cran.us.r-project.org"); 
+  if(!require(x,character.only=T)) stop("Package not found") 
+  } 
+}
+```
+
+# Chapter 1: Introduction
+## Why Heart Stroke Prediction ? Prior research and analysis.
+A heart attack, also known as a stroke, it happens when something prevents the blood flow to a certain area of the heart or when a blood artery in the heart leaks. In 2020, stroke was the cause of 1 in 6 fatalities from cardiovascular disease. A stroke occurs in the United States every 40 seconds. One person has a stroke and dies every 3.5 minutes. In the US, there are more than 795,000 stroke victims annually. Of these, about 610,000 are new or first strokes. Nearly 1 in 4 strokes, or about 185,000, occur among persons who have already experienced a stroke. Ischemic strokes account for around 87% of all strokes. Stroke is one of the leading causes of death and disability in the USA. Anyone can have a stroke, regardless of their age, gender, or background. According to the US Department of Health and Human Services' National Institutes of Health (NIH), 795,000 people in the US have strokes annually, and 137,000 of them will die.  According to the World Health Organization (WHO), stroke is the second most common cause of death worldwide, accounting for roughly 11% of all fatalities.
+
+Most cardiovascular diseases can be prevented by addressing behavioral risk factors such as tobacco use, unhealthy diet and obesity, physical inactivity using population-wide strategies.
+People with cardiovascular disease or who are at high cardiovascular risk (due to the presence of one or more risk factors such as hypertension, diabetes or already established disease) need early detection and management wherein a machine learning model can be of great help.
+
+Reference: [link](https://www.who.int/en/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds))
+
+This report is organized as following order:
+<br>
+
+1. SMART questions
+2. Description of the data
+3. Exploratory Data Analysis 
+4. Conclusion
+
+<br>
+
+<!-- Ref:[link](https://www.nichd.nih.gov/health/topics/stroke/conditioninfo/risk) -->
+
+# Chapter 2: Description of the Data
+## Source of the Data
+Presently, our dataset has a total of 4,238 observations across 16 variables. (See below for a readout of the dataset's structure and variable names.) Variable descriptions and additional information on the dataset comes from the following [link](https://www.kaggle.com/datasets/dileep070/heart-disease-prediction-using-logistic-regression).
+
+```{r basic_libraries, include=FALSE}
+library(ggplot2)
+library(gridExtra)
+library(corrplot)
+library(ROSE)
+library(dplyr)
+```
+
+```{r load_csv, include=FALSE}
+github_file_path <-
+  "https://raw.githubusercontent.com/kashyapnimmagadda/DATS-6101-GROUP-KAT/main/DataSet/framingham.csv"
+stroke_df <- read.csv(url(github_file_path))
+```
+
+```{r desc, include=TRUE}
+str(stroke_df)
+```
+
+male	 | Patient sex (Gender) | Male - 0, Female - 1 (Categorical)
+age | Patient age (Numerical)
+education | Patient education level (Numerical)
+currentSmoker | No - 0, Yes - 1
+cigsPerDay | Number of cigarettes consumed by the person (Numerical)
+BPMeds | If under Medication for BP | No - 0, Yes - 1 (Categorical)
+prevalentStroke | Patient history of heart stroke | No - 0, Yes - 1 (Categorical)
+prevalentHyper | Patient history of hypertension | No - 0, Yes - 1 (Categorical)
+diabetes | Patient history of diabetes | No - 0, Yes - 1 (Categorical)
+totChol | Patient cholestrol level (Numerical)
+sysBP | Patient systolic blood pressure level (Numerical)
+diaBP | Patient systolic blood pressure level (Numerical)
+BMI | Patient body mass index value (Numerical)
+heartRate | Patient heart rate value (Numerical)
+glucose | Patient glucose level (Numerical)
+stroke (Target variable) | Patient stroke chance (Ten year risk of coronary heart disease) | No - 0, Yes - 1 (Categorical)
+
+## Data Manipulation and Cleaning 
+
+- Converting the character value columns to categorical values and numerical values based on the type of the column.
+- Checking for Null values in the dataset
+- Null value imputation with mean
+- subsetting the data into people who got stroke and the ones that didn't 
+- subsetting the data into male and females who got stroke 
+- created a separate categorical column for BMI using the bucketing system given in [Wikipedia](https://en.wikipedia.org/wiki/Body_mass_index)
+- created a separate categorical column for average glucose level and age
+
+For our exploratory data analysis, we ignored education because this is an independent variable and has no relationship with stroke. 
+
+<!-- Following this, we cleaned the dataset in which we removed the education. -->
+
+```{r data_cleaning, include=FALSE}
+
+names(stroke_df)[names(stroke_df) == "TenYearCHD"] <- "stroke"
+colnames(stroke_df)[1] <- "gender"
+
+stroke_df$gender[stroke_df$gender == "0"] <- "F"
+stroke_df$gender[stroke_df$gender == "1"] <- "M"
+
+# converting the numeric variables to factor variables
+stroke_df$gender <- as.factor(stroke_df$gender)
+stroke_df$currentSmoker <- as.factor(stroke_df$currentSmoker)
+stroke_df$BPMeds <- as.factor(stroke_df$BPMeds)
+stroke_df$prevalentStroke <- as.factor(stroke_df$prevalentStroke)
+stroke_df$prevalentHyp <- as.factor(stroke_df$prevalentHyp)
+stroke_df$diabetes <- as.factor(stroke_df$diabetes)
+stroke_df$stroke <- as.factor(stroke_df$stroke)
+stroke_df$BMI <- as.numeric(stroke_df$BMI)
+
+# To get the summary statistics of the dataset
+summary(stroke_df)
+
+```
+
+```{r find_na_fix, include=FALSE}
+# To find the NA's in the dataset
+paste("The NA's in the dataset is:",sum(is.na(stroke_df)))
+
+```
+
+
+```{r na_fix, include=FALSE}
+
+# Replacing cigsPerDay NA values with mean value
+stroke_df$cigsPerDay[is.na(stroke_df$cigsPerDay)] <-
+  mean(stroke_df$cigsPerDay, na.rm = TRUE)
+
+# Replacing Education NA values with mean value
+stroke_df$education[is.na(stroke_df$education)] <-
+  mean(stroke_df$education, na.rm = TRUE)
+stroke_df$education <- as.integer(stroke_df$education)
+
+# Replacing BPMeds NA values with mean value
+# stroke_df$BPMeds[is.na(stroke_df$BPMeds)] = mean(stroke_df$BPMeds, na.rm = TRUE)
+# stroke_df$BPMeds <- as.integer(stroke_df$BPMeds)
+stroke_df$BPMeds[is.na(stroke_df$BPMeds)] <- 0
+
+
+# Replacing HeartRate NA values with mean value
+stroke_df$heartRate[is.na(stroke_df$heartRate)] <-
+  mean(stroke_df$heartRate, na.rm = TRUE)
+
+
+# Replacing NA values with average BMI value
+stroke_df$BMI[is.na(stroke_df$BMI)] <-
+  mean(stroke_df$BMI, na.rm = TRUE)
+
+
+# Replacing NA values with average glucose value
+stroke_df$glucose[is.na(stroke_df$glucose)] <-
+  mean(stroke_df$glucose, na.rm = TRUE)
+
+
+# Replacing NA values with average totChol value
+stroke_df$totChol[is.na(stroke_df$totChol)] <-
+  mean(stroke_df$totChol, na.rm = TRUE)
+
+
+paste("The NA's in the dataset after replacing null values is:", sum(is.na(stroke_df)))
+```
+
+```{r summary_after_cleaning, include=TRUE}
+
+# To get the summary statistics of the dataset
+
+xkablesummary(stroke_df,
+  title = "Table : Statistical Summary after cleaning",
+  pos = "center",
+  bso = "hover"
+)
+```
+
+
+```{r subsets, include=FALSE}
+
+# subsetting the data for various analyses
+stroke_1 <- subset(stroke_df, stroke == 1)
+stroke_0 <- subset(stroke_df, stroke == 0)
+stroke_1_female <- subset(stroke_df, stroke == 1 & gender == "F")
+stroke_1_male <- subset(stroke_df, stroke == 1 & gender == "M")
+
+# creating different columns for bmi, age and average_glucose_level based on different bucketing for each variables
+dat <- within(stroke_df, {
+  BMI.cat <- NA # need to initialize variable
+  BMI.cat[BMI < 18.5] <- "underweight"
+  BMI.cat[BMI >= 18.5 & BMI < 25] <- "normal"
+  BMI.cat[BMI >= 25 & BMI < 30] <- "overweight"
+  BMI.cat[BMI >= 30 & BMI < 40] <- "obesity"
+  BMI.cat[BMI >= 40] <- "severe obesity"
+
+  gluc.cat <- NA # need to initialize variable
+  gluc.cat[glucose < 60] <- "Below 60"
+  gluc.cat[glucose >= 60 & glucose < 90] <- "60 - 90"
+  gluc.cat[glucose >= 90 & glucose < 120] <- "90 - 120"
+  gluc.cat[glucose >= 120 & glucose < 180] <- "120 - 180"
+  gluc.cat[glucose >= 180 & glucose < 273] <- "180 - 273"
+  gluc.cat[glucose >= 273] <- "Beyond 273"
+
+  age.cat <- NA
+  age.cat[age <= 20] <- "Under 20"
+  age.cat[age >= 21 & age <= 40] <- "20-40"
+  age.cat[age >= 41 & age <= 60] <- "40-60"
+  age.cat[age >= 61 & age <= 80] <- "60-80"
+  age.cat[age >= 80] <- "above 80"
+})
+
+dat$BMI.cat <-
+  factor(
+    dat$BMI.cat,
+    levels = c(
+      "underweight",
+      "normal",
+      "overweight",
+      "obesity",
+      "severe obesity"
+    )
+  )
+dat$gluc.cat <-
+  factor(dat$gluc.cat,
+    levels = c("Below 60", "60 - 90", "90 - 120", "120 - 180", "180 - 273")
+  )
+dat$age.cat <-
+  factor(dat$age.cat,
+    levels = c("Under 20", "20-40", "40-60", "60-80", "above 80")
+  )
+
+dat_1 <- subset(dat, stroke == 1)
+```
+
+
+## Distribution of the numerical variables
+
+```{r numerical_variable_dist, include=TRUE}
+
+
+# Plots
+## Univariate analysis.
+
+### Density plot of Age
+ggplot(stroke_df, aes(x = age)) +
+  geom_density(
+    fill = "skyblue",
+    color = "skyblue",
+    alpha = 0.5
+  ) +
+  theme_bw() +
+  theme() +
+  ggtitle("Distribution for age")
+
+
+### Density plot for BMI
+ggplot(stroke_df, aes(x = BMI)) +
+  geom_density(
+    fill = "blue",
+    color = "blue",
+    alpha = 0.5
+  ) +
+  theme_bw() +
+  theme() +
+  ggtitle("Distribution for BMI")
+
+
+### Density plot for Glucose
+ggplot(stroke_df, aes(x = glucose)) +
+  geom_density(
+    fill = "brown",
+    color = "brown",
+    alpha = 0.5
+  ) +
+  ggtitle("Distribution for Glucose Level") +
+  theme_bw() +
+  theme()
+
+
+### Bar plot to count the number of Males and Females in the Dataset
+ggplot(stroke_df, aes(x = gender, fill = gender)) +
+  geom_bar() +
+  ggtitle("Count of Male and Female in the Dataset") +
+  theme_bw() +
+  theme() +
+  xlab("Gender") +
+  ylab("Count of people") +
+  scale_fill_discrete(name = "gender", labels = c("F - Female", "M - Male"))
+```
+
+
+## Distribution of Stroke (Target variable)
+
+```{r target_var, include=TRUE}
+
+ggplot(stroke_df, aes(x = stroke, fill = stroke)) +
+  geom_bar() +
+  scale_fill_gradient("Count of people", low = "#F0E442", high = "#999999") +
+  labs(x = "stroke", y = "Count of People", title = "Distribution of Target variable (stroke)")
+
+```
+
+The Target variable stroke here is imbalanced, and doing the balancing first would have an affect on the data, as the copies of the data made during under and over sampling would affect our analyses by changing the initial findings.
+
+
+# Chapter 3: Exploratory Data Analysis & SMART Questions:
+## Can the type of job and smoking habbit of an individual cause stroke?
+
+**NULL HYPOTHESIS**<br>
+**H0: work_type and Smoking_status are independent of stroke**<br>
+**H1: work_type and Smoking_status are dependent of stroke **
+
+```{r job_smoking, include=TRUE}
+ggplot(stroke_1,aes(x=work_type, fill= smoking_status))+geom_bar(position = "dodge")+ggtitle("Distribution of people who had a stroke based on their smoking habits")+ theme_bw() + theme()+ xlab("Work Type") + ylab("Count of people ")
+```
+
+The above graph only includes those who have had a stroke, and we can see from the graph that most people in the private sector and self-employed have had a stroke, and it's worth noting that the two major causes of stroke were those who had never smoked and those who had formerly smoked.
+
+
+```{r gender_job_smoking, include=TRUE}
+
+ggplot(stroke_1_female,aes(x=work_type, fill= smoking_status))+geom_bar(position = "dodge")+ggtitle("Distribution of females who had a stroke based on their smoking habits")+ theme_bw() + theme()+ xlab("Work Type") + ylab("Count of people ")
+ggplot(stroke_1_male,aes(x=work_type, fill= smoking_status))+geom_bar(position = "dodge")+ggtitle("Distribution of males who had a stroke based on their smoking habits")+ theme_bw() + theme()+ xlab("Work Type") + ylab("Count of people ")
+```
+
+We wanted to see if gender combined with smoking status had anything to do with stroke after observing that smoking status had something to do with stroke. We first separated the data into females who had had a stroke and then males who had had a stroke. As seen in the graph above, the key causes that caused a stroke in females were never smoked and formerly smoked, whereas in males, the reason for stroke was formerly smoked and currently smoking in the private sector, and formerly smoked and never smoked in the self-employed sector.
+
+To see if these variables are dependent of stroke we did a chi square test for smoking_status and work_type .
+
+```{r chi_test, include=TRUE}
+ctest1 = chisq.test(dat$smoking_status, dat$stroke)
+ctest2 = chisq.test(dat$work_type, dat$stroke)
+ctest1
+ctest2
+```
+
+As we can see from the results, the p values for both tests are less than 0.05, thus we fail to accept the null hypothesis and infer that smoking status and work type are related to stroke.
+
+
+## Does aging really cause stroke?
+
+**NULL HYPOTHESIS**<br>
+**H0: There is no change in the mean of age with respect to stroke**<br>
+**H1: The mean of age is changing with respect to stroke **
+
+```{r age_stroke_1, include=TRUE}
+ggplot(stroke_1, aes(x = age, fill=stroke))+ geom_density(alpha = 0.3)+ ggtitle("Density plot for age of people who had stroke")+ theme_bw() + theme()
+```
+
+In general, we know that as one gets older, the likelihood of contracting an illness increases. We wanted to see if this statement held true with our dataset. The above graph clearly shows that as one's age grows, the likelihood of having a stroke increases.
+
+We chose the ANOVA test because we wanted to examine if age played a role in a person suffering from stroke.
+```{r anova_test, include=TRUE}
+one.way <- aov(age ~ stroke, data = stroke_df)
+summary(one.way)
+```
+The ANOVA test result indicates that the p value is less than 0.05 and it is very significant. Hence we fail to accept the null hypothesis which implies that as age increases, the likelihood of having a stroke increases.
+
+## Does aging with any other features increase the chances of getting a stroke?
+
+
+### Does BMI with age affect stroke?
+**NULL HYPOTHESIS**<br>
+**H0: BMI is independent of stroke**<br>
+**H1: BMI is dependent of stroke **
+
+As we saw in our previous analysis, the likelihood of someone having a stroke increases with age. We also wondered if other factors, such as BMI and average glucose level, affect a person's chances of having a stroke as they age.
+```{r age_bmi, include=TRUE}
+ggplot(stroke_1, aes(x=bmi, y=age, color=stroke))+geom_point(size=3)+ ggtitle("Scatter plot for age vs bmi for people who had a stroke")
+```
+
+The above graph is plotted for Age vs BMI, as we can observe that above the age of 60 the datapoints are concentrated towards a particular region. All of these point fall between the BMI ranging from 25-35 which is categorized as overweight and obese.
+
+```{r age_bmi.cat, include=TRUE}
+
+
+ggplot(dat, aes(x=bmi.cat,y = age, fill=stroke))+geom_boxplot()+ ggtitle("Boxplot for Age vs BMI(categorical)")
+
+```
+
+Since the previous scatter plot provided a rough estimate of where the majority of the strokes occurred. We decided to divide these BMI into different categories based on the information provided by [Wikipedia](https://en.wikipedia.org/wiki/Body_mass_index)
+
+The categories are encoded as:
+
+- Underweight - BMI < 18.5
+- Normal - BMI >= 18.5 and BMI <= 25
+- Overweight - BMI >= 25.0 and BMI <= 30
+- Obesity - BMI >= 30.0 and BMI < 40
+- "Extreme" or Severe Obesity - BMI >= 40 
+
+A boxplot was plotted after categorizing them based on Wikipedia information to see if there was any pattern for Age vs BMI categories. A few interesting findings are that if you have a normal BMI index, you can live a healthy lifestyle until the age of 73, but as your BMI index rises and you fall into the category of overweight, the chances of having a stroke is higher when you are almost 60 years old, and when your BMI index falls into the range of obesity and severe obesity, your chances of having a stroke is much early, That is if you fall under these categories the chances that someone will get a stroke is as early as he/she reaches 59 years or 52 years respectively.
+
+As a result, as your BMI increases, the age at which you have a stroke decreases.
+
+We also know from our previous analysis that age is related to stroke, and hence we are performing the chi-squared test for only BMI and stroke.
+
+```{r age_bmi.cat_chi_test, include=TRUE}
+
+ctest1 = chisq.test(dat$bmi.cat, dat$stroke)
+ctest1
+```
+As we can see from the chi-squared test, the p-value is less than 0.05, So we fail to accept the null hypothesis and can conclude that BMI is related to stroke.
+
+### Does Average glucose level with age affect stroke?
+**NULL HYPOTHESIS**<br>
+**H0: Average glucose level is independent of stroke**<br>
+**H1: Average glucose level is dependent of stroke **
+
+```{r age_avg_glucose, include=TRUE}
+stroke_1_dat = subset(dat, stroke==1 )
+ggplot(stroke_1_dat, aes(fill=stroke, y = age, x = avg_gluc.cat))+ geom_boxplot()+ ggtitle("Boxplot for Age vs Average Gluclose level(Categorical) for people with stroke")
+```
+
+We can see how sugar levels affect the chances of someone having a stroke from this graph, which is plotted for Age vs Average Glucose Level. According to this graph, if your sugar level is below 60 (i.e. very low sugar), your chances of having a stroke are at an early stage in life, which is around 53 years, if your sugar level increases and falls in the range of 60-90, your chances of having a stroke are higher as you reach 58 years, and if you have a sugar level within the range 90-120 (i.e. normal blood sugar range), your chances of having a stroke are when you reach 60 years. When your blood sugar is in the range of 120 - 180 (high blood sugar), you can say that your chances of having a stroke are at 62 years old, and the same goes for ranges 180 - 273. (very high blood sugar level).
+
+Since we can see that average glucose level in the body along with age is somehow affecting the chances of a person having a stroke. From our previous analysis we can say that age definitely has an affect on stroke, now we are going to look if the average glucose level has any effect on stroke using chi-squared test.
+
+```{r avg_glucose_level_chi_tests, include=TRUE}
+ctest1 = chisq.test(dat$avg_gluc.cat, dat$stroke)
+ctest1
+```
+We can see from this test that the p-value is less than 0.05, so we cannot accept the null hypothesis and can conclude that average glucose level is dependent on stroke.
+
+### Can Hypertension be a reason for an individual to suffer from a stroke?
+**NULL HYPOTHESIS**<br>
+**H0: Hypertension is independent of stroke**<br>
+**H1: Hypertension is dependent of stroke **
+
+```{r age_hypertension, include=TRUE}
+ggplot(data = stroke_df, aes(x=as.character(hypertension), y=age, fill=hypertension)) +
+    geom_boxplot() +
+    labs(title="Age distribution by hypertension", x="hypertension", y="age")
+```
+
+A major risk factor for stroke is high blood pressure. HBP makes your heart work harder and gradually damages your organs and arteries. You are more prone to get a stroke due to hypertension as you age. So as the age increases the chances of getting hypertension for an individual is higher which leads to stroke.
+
+Ref: [link](https://www.stroke.org/-/media/Stroke-Files/Lets-Talk-About-Stroke/Risk-Factors/Stroke-and-High-Blood-Pressure-ucm_493407.pdf).
+
+
+```{r}
+
+ctest3 = chisq.test(stroke_df$hypertension, stroke_df$stroke)
+ctest3
+
+
+```
+As we can observe that the p-value is less than 0.05, we fail to accept the null hypothesis and hence we can conclude that hypertension is dependent of stroke.
+
+### Can heart disease be a reason for an individual to suffer from a stroke?
+**NULL HYPOTHESIS**<br>
+**H0: Heart disease is independent of stroke**<br>
+**H1: Heart disease is dependent of stroke **
+
+```{r age_heart_disease, include=TRUE}
+ggplot(data = stroke_df, aes(x=as.character(heart_disease ), y=age, fill=heart_disease)) +
+    geom_boxplot() +
+    labs(title="Age distribution by heart_disease ", x="heart_disease ", y="age")
+```
+
+Heart disorders can increase your risk for stroke. 
+So from the plot we can see that as age increases the chances of getting a heart disease for an individual also increases which leads to stroke. 
+
+Ref: [link](https://www.cdc.gov/stroke/risk_factors.htm#:~:text=Heart%20disease,rich%20blood%20to%20the%20brain.).
+
+```{r}
+
+ctest4 = chisq.test(stroke_df$heart_disease, stroke_df$stroke)
+ctest4
+
+```
+As we can observe that the p-value is less than 0.05, we fail to accept the null hypothesis and hence we can conclude that heart disease is dependent of stroke.
+
+## Does residence type cause stroke?
+
+
+**NULL HYPOTHESIS**<br>
+**H0: Residence Type is independent of stroke**<br>
+**H1: Residence Type is dependent of stroke **
+
+
+```{r}
+
+ggplot(stroke_1_dat, aes(x=Residence_type,fill=stroke))+geom_bar(position = "dodge")+ggtitle("People Having stroke in Urban and Rural Area (People Affected by stroke)")+ theme_bw() +theme()+ xlab("Residence Type") + ylab("Number of people")
+
+```
+
+We can see that number of people who are affected by stroke in Urban is higher when compared to number of people affected by stroke in Rural. The above graph represents only stroke affected people in Rural and Urban Residence. For further analysis, to check what other factors in residence causes that are related to stroke we chose smoking habits and work environment of the people.
+```{r}
+
+ggplot(stroke_1_dat,aes(x=Residence_type,fill=work_type))+geom_bar(position="dodge")+ggtitle("Work Type of Rural and Urban - People who are affected by stroke ")+theme()+theme_bw()+ylab("No of people")
+
+```
+
+A review of numerous research found that working in a high-stress environment may increase the risk of stroke. The meta-analysis is published in the October 14, 2015, online issue of Neurology, the medical journal of the American Academy of Neurology. 
+From the above graph we can see that the number of people who works in private has higher risk of getting stroke in both rural and urban. We can also see that people who are working in self-employed sectors also
+get stroke.
+
+Ref: [link](https://www.aan.com/PressRoom/Home/PressRelease/1412#:~:text=Having%20a%20high%20stress%20job,the%20American%20Academy%20of%20Neurology.)
+
+```{r}
+
+ggplot(stroke_1_dat,aes(x=Residence_type,fill=smoking_status))+geom_bar(position="dodge")+ggtitle("Smoking habit of Rural and Urban - People who are affected by stroke ")+theme()+theme_bw()+ylab("No of people")
+
+```
+
+The risk of getting a stroke is boosted by smoking by 20–30%. More than 8,000 stroke fatalities are brought on by smoke exposure each year. Smoking alters the working of heart, blood, and vascular systems, which raises your chance of suffering a heart attack.
+From the above graph we can see that the smoking habits of people who suffered stroke in both rural and urban.
+
+Even though smoking also has an effect on causing stroke, surprisingly people who won't smoke have suffered stroke (According to this data). 
+
+Ref: [link](https://www.cdc.gov/tobacco/campaign/tips/diseases/heart-disease-stroke.html#:~:text=Secondhand%20smoke%20increases%20the%20risk,of%20having%20a%20heart%20attack.)
+```{r}
+ch<-table(stroke_df$Residence_type, stroke_df$stroke)  
+chisq.test(stroke_df$Residence_type, stroke_df$stroke)
+```
+
+# Chapter 4: Conclusion
+
+A few interesting facts that we found after our analyses are:
+
+- Work type and smoking habits(which includes non-smokers too) of a person can lead to a stroke.
+- Age has played a major role for someone to get affected by a stroke.
+- As a person ages and if they fall into a higher BMI range the risk of he/she getting a stroke at an early stage(about 50 years of   age) in life is higher.
+- The average glucose level in the person can determine if they can suffer from a stroke.
+- As per this data the chances of hypertension and heart disease in a person is higher when he/she is older(above 55 years) which     can lead to a stroke.
+- Residence type along with work type and smoking habits of a person will not cause a stroke. 
+
+This summary paper shows exploratory data analysis of various variables such as stroke, age, smoking status, residence type, BMI, Hypertension, and so on. The cleaned data will be used again, and the model will be trained on it. We discovered the factors (variables) that cause stroke and took them into account based on the analysis. Our long-term goal is to develop the best model that can predict if a person can suffer from a stroke based on the current dataset we have.
+
+## Limitations
+
+There are a few limitations in our dataset because the number of datapoints is very low (approximately 5000 rows), and it would be preferable if there were more datapoints for people who have suffered from stroke so that the analyses performed on this data can be applied to a larger population. Other factors such as previous stroke history, stress level, stroke history in the family, cholesterol imbalance, and physical inactivity could have been more useful in predicting the likelihood of someone having a stroke.
+
+
