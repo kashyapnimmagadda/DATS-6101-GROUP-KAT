@@ -1,5 +1,5 @@
 ---
-title: "Heart Stroke Prediction"
+title: "Heart Stroke Analysis - Summary Report"
 author: "Team KAT"
 date: "`r Sys.Date()`"
 output:  
@@ -24,17 +24,6 @@ loadPkg = function(x)
 }
 ```
 
-<!-- This report is organized as following order: -->
-<!-- <br> -->
-
-<!-- 1. Introduction -->
-<!-- 2. Description of the data -->
-<!-- 3. Exploratory Data Analysis and SMART questions -->
-<!-- 4. Conclusion -->
-<!-- 5. Limitations -->
-
-<!-- <br> -->
-
 # Chapter 1: Introduction
 ## Why Heart Stroke Prediction ? Prior research and analysis.
 A heart attack, also known as a stroke, it happens when something prevents the blood flow to a certain area of the heart or when a blood artery in the heart leaks. In 2020, stroke was the cause of 1 in 6 fatalities from cardiovascular disease. A stroke occurs in the United States every 40 seconds. One person has a stroke and dies every 3.5 minutes. In the US, there are more than 795,000 stroke victims annually. Of these, about 610,000 are new or first strokes. Nearly 1 in 4 strokes, or about 185,000, occur among persons who have already experienced a stroke. Ischemic strokes account for around 87% of all strokes. Stroke is one of the leading causes of death and disability in the USA. Anyone can have a stroke, regardless of their age, gender, or background. According to the US Department of Health and Human Services' National Institutes of Health (NIH), 795,000 people in the US have strokes annually, and 137,000 of them will die.  According to the World Health Organization (WHO), stroke is the second most common cause of death worldwide, accounting for roughly 11% of all fatalities.
@@ -42,14 +31,11 @@ A heart attack, also known as a stroke, it happens when something prevents the b
 Most cardiovascular diseases can be prevented by addressing behavioral risk factors such as tobacco use, unhealthy diet and obesity, physical inactivity using population-wide strategies.
 People with cardiovascular disease or who are at high cardiovascular risk (due to the presence of one or more risk factors such as hypertension, diabetes or already established disease) need early detection and management wherein a machine learning model can be of great help.
 
-Reference: [link](https://www.who.int/en/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds))
-
-
-<!-- Ref:[link](https://www.nichd.nih.gov/health/topics/stroke/conditioninfo/risk) -->
+Reference: [WHO](https://www.who.int/en/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds))
 
 # Chapter 2: Description of the Data
 ## Source of the Data
-Presently, our dataset has a total of 4,238 observations across 16 variables. (See below for a readout of the dataset's structure and variable names.) Variable descriptions and additional information on the dataset comes from the following [link](https://www.kaggle.com/datasets/dileep070/heart-disease-prediction-using-logistic-regression).
+Presently, our dataset has a total of 4,238 observations across 16 variables. (See below for a readout of the dataset's structure and variable names). Variable descriptions and additional information on the dataset comes from the following: [Data Source](https://www.kaggle.com/datasets/dileep070/heart-disease-prediction-using-logistic-regression).
 
 ```{r basic_libraries, include=FALSE}
 library(ggplot2)
@@ -64,49 +50,51 @@ library(conflicted)
 ```
 
 ```{r load_csv, include=FALSE}
+
 github_file_path <-
   "https://raw.githubusercontent.com/kashyapnimmagadda/DATS-6101-GROUP-KAT/main/DataSet/framingham.csv"
 stroke_df <- read.csv(url(github_file_path))
+
 ```
 
 ```{r desc, include=TRUE}
 str(stroke_df)
 ```
 
- Variable |  Definition  | DataType
+  Variable |  Definition  | DataType
   :-:    |  :--         | :-
-male	 | Patient sex (Gender) -> Male - 0, Female - 1  | (Categorical)
-age | Patient age | (Numerical)
-education | Patient education level | (Numerical)
-currentSmoker | No - 0, Yes - 1 | (Categorical)
-cigsPerDay | Number of cigarettes consumed by the person | (Numerical)
-BPMeds | If under Medication for BP -> No - 0, Yes - 1 | (Categorical)
-prevalentStroke | Patient history of heart stroke -> No - 0, Yes - 1 | (Categorical)
-prevalentHyper | Patient history of hypertension -> No - 0, Yes - 1 | (Categorical)
-diabetes | Patient history of diabetes -> No - 0, Yes - 1 | (Categorical)
-totChol | Patient cholestrol level | (Numerical)
-sysBP | Patient systolic blood pressure level | (Numerical)
-diaBP | Patient systolic blood pressure level | (Numerical)
-BMI | Patient body mass index value | (Numerical)
-heartRate | Patient heart rate value | (Numerical)
-glucose | Patient glucose level | (Numerical)
-stroke  | Patient stroke (10 year risk of coronary heart stroke) -> No - 0, Yes - 1 | (Categorical)
+male	 | Patient sex (Gender) -> Male - 0, Female - 1  | Categorical
+age | Patient age | Numerical
+education | Patient education level | Numerical
+currentSmoker | No - 0, Yes - 1 | Categorical
+cigsPerDay | Number of cigarettes consumed by the person | Numerical
+BPMeds | If under Medication for BP -> No - 0, Yes - 1 | Categorical
+prevalentStroke | Patient history of heart stroke -> No - 0, Yes - 1 | Categorical
+prevalentHyper | Patient history of hypertension -> No - 0, Yes - 1 | Categorical
+diabetes | Patient history of diabetes -> No - 0, Yes - 1 | Categorical
+totChol | Patient cholestrol level | Numerical
+sysBP | Patient systolic blood pressure level | Numerical
+diaBP | Patient systolic blood pressure level | Numerical
+BMI | Patient body mass index value | Numerical
+heartRate | Patient heart rate value | Numerical
+glucose | Patient glucose level | Numerical
+stroke  | Patient stroke (10 year risk of coronary heart stroke) -> No - 0, Yes - 1 | Categorical
 
 ## Data Manipulation and Cleaning 
 
-- Converting the character value columns to categorical values and numerical values based on the type of the column.
-- Checking for Null values in the dataset
-- Null value imputation with mean
-- subsetting the data into people who got stroke and the ones that didn't 
-- subsetting the data into male and females who got stroke 
-- created a separate categorical column for BMI using the bucketing system given in [Wikipedia](https://en.wikipedia.org/wiki/Body_mass_index)
-- created a separate categorical column for average glucose level and age
+- Factorizing the character value columns into categorical values, and numerical values based on the type of the column.
+- Checking for Null values in the dataset.
+- Null value imputation with mean for all the columns contains null values due to less number of observations.
+- subsetting the data into people who got stroke and the ones that didn't .
+- subsetting the data into male and females who got stroke .
+- created a separate categorical column for BMI using the bucketing system given in [Wikipedia](https://en.wikipedia.org/wiki/Body_mass_index).
+- created a separate categorical column for average glucose level and age.
+- Renaming the target variable from TenYearCHD to stroke.
 
 For our exploratory data analysis, we ignored education because this is an independent variable and has no relationship with stroke. 
 
-<!-- Following this, we cleaned the dataset in which we removed the education. -->
-
 ```{r data_cleaning, include=FALSE}
+
 
 names(stroke_df)[names(stroke_df) == "TenYearCHD"] <- "stroke"
 colnames(stroke_df)[1] <- "gender"
@@ -129,15 +117,16 @@ summary(stroke_df)
 
 ```
 
+
 ```{r find_na_fix, include=FALSE}
+
 # To find the NA's in the dataset
-paste("The NA's in the dataset is:",sum(is.na(stroke_df)))
+paste("The NA's in the dataset before cleaning null values: ",sum(is.na(stroke_df)))
 
 ```
 
 
 ```{r na_fix, include=FALSE}
-
 # Replacing cigsPerDay NA values with mean value
 stroke_df$cigsPerDay[is.na(stroke_df$cigsPerDay)] <-
   mean(stroke_df$cigsPerDay, na.rm = TRUE)
@@ -171,15 +160,16 @@ stroke_df$glucose[is.na(stroke_df$glucose)] <-
 # Replacing NA values with average totChol value
 stroke_df$totChol[is.na(stroke_df$totChol)] <-
   mean(stroke_df$totChol, na.rm = TRUE)
-
-
-paste("The NA's in the dataset after replacing null values is:", sum(is.na(stroke_df)))
 ```
 
 
-```{r}
-paste("The NA's in the dataset after replacing null values is:", sum(is.na(stroke_df$glucose)))
+```{r na_check, include=FALSE}
+
+paste("The NA's in the dataset after replacing null values is: ", sum(is.na(stroke_df)))
+
 ```
+
+
 
 ```{r summary_after_cleaning, include=TRUE}
 
@@ -248,11 +238,13 @@ dat$age.cat <-
   )
 
 dat_1 <- subset(dat, stroke == 1)
+
 ```
 
 
 ## Distribution of the predictor variables
 
+### Density plot of Age
 ```{r numerical_variable_dist_age, include=TRUE}
 # Plots
 ## Univariate analysis.
@@ -264,15 +256,21 @@ ggplot(stroke_df, aes(x = age)) +
     color = "skyblue",
     alpha = 0.5
   ) +
+  geom_vline(xintercept = mean(stroke_df$age), 
+             color = "brown", 
+             size = 1, linetype="dashed") +
+  scale_color_manual(values = c("Mean" = "brown")) +
   theme_bw() +
   theme() +
   ggtitle("Distribution for age")
 
 ```
 
+
 This density plot is showing a smooth line which represents the density of age values in our dataset. The higher the peak of the line, the more values there are in that range. Conversely, the lower the peak, the fewer values there are in that range.
 
 
+### Density plot for BMI
 ```{r numerical_variable_dist_BMI, include=TRUE}
 ### Density plot for BMI
 ggplot(stroke_df, aes(x = BMI)) +
@@ -281,14 +279,20 @@ ggplot(stroke_df, aes(x = BMI)) +
     color = "blue",
     alpha = 0.5
   ) +
+    geom_vline(xintercept = mean(stroke_df$BMI), 
+             color = "black", 
+             size = 1, linetype="dashed") +
+  scale_color_manual(values = c("Mean" = "black")) +
   theme_bw() +
   theme() +
   ggtitle("Distribution for BMI")
 ```
 
 
-This density plot depicts a smooth line which represents the density of BMI values in our dataset. The higher the peak of the line, the more values there are in that range. Conversely, the lower the peak, the fewer values there are in that range. From this plot, within the BMI range of 20 to 30, with a peak value of 25 BMI, more observations are recorded.
+This density plot depicts a smooth curve which represents the density of BMI values in our dataset. The higher the peak of the line, the more values there are in that range. Conversely, the lower the peak, the fewer values there are in that range. From this plot, within the BMI range of 20 to 30, with a peak value of 26 BMI, more observations are recorded.
 
+
+### Density plot for Glucose
 ```{r numerical_variable_dist_glu, include=TRUE}
 ### Density plot for Glucose
 ggplot(stroke_df, aes(x = glucose)) +
@@ -297,13 +301,19 @@ ggplot(stroke_df, aes(x = glucose)) +
     color = "brown",
     alpha = 0.5
   ) +
+  geom_vline(xintercept = mean(stroke_df$glucose), 
+             color = "blue", 
+             size = 1, linetype="dashed") +
+  scale_color_manual(values = c("Mean" = "blue")) + 
   ggtitle("Distribution for Glucose Level") +
   theme_bw() +
   theme()
 ```
 
-The above density plot represents the distribution of glucose level of all the patients in the dataset. From this density curve, majority of the observations are recorded below the glucose level of 100 with a peak value at 90.
+The above density plot represents the distribution of glucose level of all the patients in the dataset. The x-axis ranges from 50 to 400 and the density as y-axis. sFrom this density curve, majority of the observations are recorded below the glucose level of 100 with a peak value at 80.
 
+
+### Bar plot for distribution of Males and Females in the Dataset
 ```{r numerical_variable_dist_gender, include=TRUE}
 ### Bar plot to count the number of Males and Females in the Dataset
 ggplot(stroke_df, aes(x = gender, fill = gender)) +
@@ -382,8 +392,19 @@ As we can see from the results, the p value for currentSmoker and stroke chi-squ
 **H1: The mean of age is changing with respect to stroke **
 
 ```{r age_stroke_1, include=TRUE}
-ggplot(stroke_1, aes(x = age, fill=stroke))+ geom_density(alpha = 0.3)+ ggtitle("Density plot for age of people who had stroke")+ theme_bw() + theme()
+
+ggplot(stroke_1, aes(x = age, fill = stroke)) + 
+  geom_density(alpha = 0.3) + 
+  ggtitle("Density plot for age of people who had stroke") +
+  geom_vline(xintercept = mean(stroke_df$age), 
+             color = "blue", 
+             size = 1, linetype="dashed") +
+  scale_color_manual(values = c("Mean" = "blue")) +
+  theme_bw() + 
+  theme()
+
 ```
+
 
 In general, we know that as one gets older, the likelihood of contracting an illness increases. We wanted to see if this statement held true with our dataset. The above graph clearly shows that as one's age grows, the likelihood of having a stroke increases.
 
@@ -577,3 +598,16 @@ This summary paper shows exploratory data analysis of various variables such as 
 # Chapter 5: Limitations
 
 There are a few limitations in our dataset because the number of datapoints is very low (approximately 4300 rows) also target variable is an imbalanced data column which requires techniques (over and under sampling methods) in order to convert into balanced data, and it would be preferable if there were more datapoints for people who have suffered from stroke so that the analyses performed on this data can be applied to a larger population. Other factors such as previous stress level, stroke history in the family, cholesterol imbalance, and physical inactivity could have been more useful in predicting the likelihood of someone having a stroke.
+
+# Chapter 6: References
+
+World Health Organization. (2021, May 17). Cardiovascular diseases (CVDs). Fact Sheet. https://www.who.int/en/news-room/fact-sheets/detail/cardiovascular-diseases-(cvds) 
+
+Dataset: Dileep, K. (2020). Heart Disease Prediction using Logistic Regression. Kaggle. https://www.kaggle.com/dileep070/heart-disease-prediction-using-logistic-regression 
+
+Body Mass Index reference: Wikipedia contributors. (2023, March 22). In Wikipedia, from https://en.wikipedia.org/wiki/Body_mass_index 
+
+United States health records of BP and stroke: American Stroke Association. (n.d.). Stroke and High Blood Pressure. [PDF] https://www.stroke.org/-/media/Stroke-Files/Lets-Talk-About-Stroke/Risk-Factors/Stroke-and-High-Blood-Pressure-ucm_493407.pdf 
+
+
+Stroke Risk Factors.: Centers for Disease Control and Prevention. (2022, January 5) from https://www.cdc.gov/stroke/risk_factors.htm#:~:text=Heart%20disease,rich%20blood%20to%20the%20brain.
