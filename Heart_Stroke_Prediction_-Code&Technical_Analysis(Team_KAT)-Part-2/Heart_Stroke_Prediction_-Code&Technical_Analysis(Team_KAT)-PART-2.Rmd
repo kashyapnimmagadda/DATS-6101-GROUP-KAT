@@ -662,6 +662,7 @@ stroke_df_balanced <- ROSE(stroke ~ .,
                          seed = 123, 
                          N = nrow(stroke_df) + sum(stroke_df$stroke == 1))$data
 
+# stroke_df_balanced <- stroke_df_balanced_og
 # Check the balance of the target variable in the oversampled data
 table(stroke_df_balanced$stroke)
 
@@ -683,14 +684,64 @@ xkablesummary(stroke_df_balanced,
 ```
 
 
-```{r}
+```{r balanced_target_var_plot, echo = TRUE}
 
-head(stroke_df, n = 10)
+# Define a custom color palette
+colors <- c("#009E73", "#CC79A7")
+
+# Create the plot
+
+ggplot(stroke_df_balanced, aes(x = stroke)) +
+  geom_bar(aes(fill = ..count..), stat = "count") +
+  geom_text(aes(label = ..count..), stat = "count", vjust = -0.5) +
+  scale_fill_gradient("Count", low = colors[1], high = colors[2]) +
+  expand_limits(x = c(0, 1)) +
+  labs(x = "Stroke", y = "Count of People", title = "Distribution of Target Variable (Stroke)") +
+  theme_classic() +
+  theme(legend.position = "none")
 
 ```
 
+
+
+```{r correlation_plot, echo = TRUE}
+
+
+```
 ```{r}
+stroke_df_balanced.data = glm(formula = stroke ~ ., 
+                              data = stroke_df_balanced, 
+                              family = binomial)
+
+print(summary(stroke_df_balanced.data))
+```
+
+```{r train_test_split, echo = TRUE}
+
+# Split the data into training and testing sets
+set.seed(123)
+
+train_index <- sample(nrow(stroke_df_balanced), 0.7 * nrow(stroke_df_balanced))
+train <- data[train_index, ]
+test <- data[-train_index, ]
+
+# Build a logistic regression model
+model <- glm(stroke ~ ., 
+             data = stroke_df_balanced, 
+             family = "binomial")
+
+# Make predictions on the testing set
+predictions <- predict(model, newdata = test, type = "response")
 
 ```
 
+
+```{r model_evaluation, echo = TRUE}
+
+# Evaluate the performance of the model
+
+library(caret)
+confusionMatrix(predictions > 0.5, test$stroke)
+
+```
 
