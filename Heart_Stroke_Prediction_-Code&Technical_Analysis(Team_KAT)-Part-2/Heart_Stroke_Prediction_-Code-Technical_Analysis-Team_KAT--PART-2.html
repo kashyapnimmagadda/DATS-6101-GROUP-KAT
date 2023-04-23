@@ -11,7 +11,7 @@
 
 <meta name="author" content="Team KAT" />
 
-<meta name="date" content="2023-04-19" />
+<meta name="date" content="2023-04-23" />
 
 <title>Heart Stroke Prediction - Code &amp; Technical Analysis</title>
 
@@ -1800,7 +1800,7 @@ border-radius: 0px;
 <h1 class="title toc-ignore">Heart Stroke Prediction - Code &amp;
 Technical Analysis</h1>
 <h4 class="author">Team KAT</h4>
-<h4 class="date">2023-04-19</h4>
+<h4 class="date">2023-04-23</h4>
 
 </div>
 
@@ -3007,464 +3007,266 @@ Transforming im-balanced data:</h3>
 ##   method            from
 ##   as.zoo.data.frame zoo</code></pre>
 <pre class="r"><code>library(caret)
-library(ROSE)</code></pre>
-<pre class="r"><code># set.seed(123) # Set a seed for reproducibility
-# train_idx &lt;- createDataPartition(stroke_df$stroke, p = 0.67, list = FALSE)
-# train_data &lt;- stroke_df[train_idx, ]
-# test_data &lt;- stroke_df[-train_idx, ]</code></pre>
-<pre class="r"><code># train_data_balanced &lt;- SMOTE(stroke ~ ., train_data, perc.over = 100, k = 5)
-# test_data_balanced &lt;- SMOTE(stroke ~ ., test_data, perc.over = 100, k = 5)</code></pre>
-<pre class="r"><code># ggplot(train_data_balanced, aes(x = stroke)) +
-#   geom_bar(aes(fill = ..count..)) +
-#   scale_fill_gradient(&quot;Count&quot;, low = &quot;#F0E442&quot;, high = &quot;#999999&quot;) +
-#   labs(x = &quot;stroke&quot;, y = &quot;Count of People&quot;, title = &quot;Distribution of Target in Train&quot;)</code></pre>
-<pre class="r"><code># ggplot(test_data_balanced, aes(x = stroke)) +
-#   geom_bar(aes(fill = ..count..)) +
-#   scale_fill_gradient(&quot;Count&quot;, low = &quot;#F0E442&quot;, high = &quot;#999999&quot;) +
-#   labs(x = &quot;stroke&quot;, y = &quot;Count of People&quot;, title = &quot;Distribution of Target in Test&quot;)</code></pre>
-</div>
-</div>
-<div id="note" class="section level1" number="9">
-<h1><span class="header-section-number">9</span> Note:</h1>
-<div id="combining-the-over-sampled-data-with-the-original-data" class="section level2" number="9.1">
-<h2><span class="header-section-number">9.1</span> Combining the
-over-sampled data with the original data:</h2>
-<p>Once the process of over-sampling the training data is complete,
-combining it with the original data to increase the number of
-observations.</p>
-<pre class="r"><code># stroke_df_balanced &lt;- rbind(train_data_balanced, stroke_df[-train_idx, ])
-# stroke_df_balanced &lt;- rbind(test_data_balanced, stroke_df[train_idx, ])</code></pre>
-<pre class="r"><code># Check the balance of the target variable in the original data
-table(stroke_df$stroke)</code></pre>
+library(ROSE)
+library(car)</code></pre>
+<pre><code>## Loading required package: carData</code></pre>
+<pre class="r"><code>set.seed(123)
+
+train_index &lt;- createDataPartition(stroke_df$stroke, p = 0.7, 
+                                   list = FALSE, times = 1)
+train_data &lt;- stroke_df[train_index, ]
+test_data &lt;- stroke_df[-train_index, ]</code></pre>
+<p>Since the classes are not balanced (0=3594, 1=644), I will use SMOTE
+to balance them since if we treat them as they are, our model will
+predict on the class that is in the majority, which will be biased.</p>
+<pre class="r"><code># Count the number of observations in each class before SMOTE
+table(train_data$stroke)</code></pre>
 <pre><code>## 
 ##    0    1 
-## 3594  644</code></pre>
-<pre class="r"><code># Perform oversampling using the ROSE package
-stroke_df_balanced &lt;- ROSE(stroke ~ ., 
-                         data = stroke_df, 
-                         seed = 123, 
-                         N = nrow(stroke_df) + sum(stroke_df$stroke == 1))$data
+## 2516  451</code></pre>
+<pre class="r"><code># Apply SMOTE to balance the classes
+train_data_balanced &lt;- SMOTE(stroke ~ ., 
+                             train_data, 
+                             perc.over = 300, 
+                             perc.under = 100)
 
-# Check the balance of the target variable in the oversampled data
-table(stroke_df_balanced$stroke)</code></pre>
+# Count the number of observations in each class after SMOTE
+table(train_data_balanced$stroke)</code></pre>
 <pre><code>## 
 ##    0    1 
-## 2459 2423</code></pre>
-<p>The above code returns the balanced dataframe using over-sampling
-technique which equalize the matches of target variable categories.</p>
-</div>
-<div id="summary-after-data-transforming" class="section level2" number="9.2">
-<h2><span class="header-section-number">9.2</span> Summary after
-data-transforming</h2>
-<pre class="r"><code># To get the summary statistics of the balanced dataset
+## 1353 1804</code></pre>
+<pre class="r"><code>nrow(train_data_balanced)</code></pre>
+<pre><code>## [1] 3157</code></pre>
+<pre class="r"><code># Count the number of observations in each class before SMOTE
+table(test_data$stroke)</code></pre>
+<pre><code>## 
+##    0    1 
+## 1078  193</code></pre>
+<pre class="r"><code># Apply SMOTE to balance the classes
+test_data_balanced &lt;- SMOTE(stroke ~ ., 
+                             test_data, 
+                             perc.over = 300, 
+                             perc.under = 100)
 
-xkablesummary(stroke_df_balanced,
-  title = &quot;Table : Statistical Summary after balancing dataframe&quot;,
-  pos = &quot;center&quot;,
-  bso = &quot;hover&quot;
-)</code></pre>
-<table class="table table-hover" style="width: auto !important; margin-left: auto; margin-right: auto;">
-<caption>
-Table : Statistical Summary after balancing dataframe
-</caption>
-<thead>
-<tr>
-<th style="text-align:left;">
-</th>
-<th style="text-align:left;">
-gender
-</th>
-<th style="text-align:left;">
-age
-</th>
-<th style="text-align:left;">
-education
-</th>
-<th style="text-align:left;">
-currentSmoker
-</th>
-<th style="text-align:left;">
-cigsPerDay
-</th>
-<th style="text-align:left;">
-BPMeds
-</th>
-<th style="text-align:left;">
-prevalentStroke
-</th>
-<th style="text-align:left;">
-prevalentHyp
-</th>
-<th style="text-align:left;">
-diabetes
-</th>
-<th style="text-align:left;">
-totChol
-</th>
-<th style="text-align:left;">
-sysBP
-</th>
-<th style="text-align:left;">
-diaBP
-</th>
-<th style="text-align:left;">
-BMI
-</th>
-<th style="text-align:left;">
-heartRate
-</th>
-<th style="text-align:left;">
-glucose
-</th>
-<th style="text-align:left;">
-stroke
-</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td style="text-align:left;">
-Min
-</td>
-<td style="text-align:left;">
-F:2655
-</td>
-<td style="text-align:left;">
-Min. :3.304
-</td>
-<td style="text-align:left;">
-Min. :-1.021
-</td>
-<td style="text-align:left;">
-0:2474
-</td>
-<td style="text-align:left;">
-Min. :-25.5009
-</td>
-<td style="text-align:left;">
-0:4667
-</td>
-<td style="text-align:left;">
-0:4832
-</td>
-<td style="text-align:left;">
-0:2996
-</td>
-<td style="text-align:left;">
-0:4678
-</td>
-<td style="text-align:left;">
-Min. : 54.01
-</td>
-<td style="text-align:left;">
-Min. : 53.18
-</td>
-<td style="text-align:left;">
-Min. : 38.95
-</td>
-<td style="text-align:left;">
-Min. :10.84
-</td>
-<td style="text-align:left;">
-Min. : 36.12
-</td>
-<td style="text-align:left;">
-Min. : -0.0507
-</td>
-<td style="text-align:left;">
-0:2459
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Q1
-</td>
-<td style="text-align:left;">
-M:2227
-</td>
-<td style="text-align:left;">
-1st Qu.:3.778
-</td>
-<td style="text-align:left;">
-1st Qu.: 1.002
-</td>
-<td style="text-align:left;">
-1:2408
-</td>
-<td style="text-align:left;">
-1st Qu.: -0.8456
-</td>
-<td style="text-align:left;">
-1: 215
-</td>
-<td style="text-align:left;">
-1: 50
-</td>
-<td style="text-align:left;">
-1:1886
-</td>
-<td style="text-align:left;">
-1: 204
-</td>
-<td style="text-align:left;">
-1st Qu.:203.55
-</td>
-<td style="text-align:left;">
-1st Qu.:117.05
-</td>
-<td style="text-align:left;">
-1st Qu.: 74.81
-</td>
-<td style="text-align:left;">
-1st Qu.:22.91
-</td>
-<td style="text-align:left;">
-1st Qu.: 67.10
-</td>
-<td style="text-align:left;">
-1st Qu.: 67.3751
-</td>
-<td style="text-align:left;">
-1:2423
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Median
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-Median :3.934
-</td>
-<td style="text-align:left;">
-Median : 1.674
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-Median : 6.2470
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-Median :235.81
-</td>
-<td style="text-align:left;">
-Median :132.83
-</td>
-<td style="text-align:left;">
-Median : 83.66
-</td>
-<td style="text-align:left;">
-Median :25.81
-</td>
-<td style="text-align:left;">
-Median : 75.35
-</td>
-<td style="text-align:left;">
-Median : 79.9895
-</td>
-<td style="text-align:left;">
-NA
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Mean
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-Mean :3.924
-</td>
-<td style="text-align:left;">
-Mean : 1.885
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-Mean : 9.2600
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-Mean :239.06
-</td>
-<td style="text-align:left;">
-Mean :136.70
-</td>
-<td style="text-align:left;">
-Mean : 84.47
-</td>
-<td style="text-align:left;">
-Mean :26.12
-</td>
-<td style="text-align:left;">
-Mean : 76.33
-</td>
-<td style="text-align:left;">
-Mean : 84.2310
-</td>
-<td style="text-align:left;">
-NA
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Q3
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-3rd Qu.:4.072
-</td>
-<td style="text-align:left;">
-3rd Qu.: 2.654
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-3rd Qu.: 17.9835
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-3rd Qu.:270.06
-</td>
-<td style="text-align:left;">
-3rd Qu.:152.61
-</td>
-<td style="text-align:left;">
-3rd Qu.: 93.18
-</td>
-<td style="text-align:left;">
-3rd Qu.:28.94
-</td>
-<td style="text-align:left;">
-3rd Qu.: 84.31
-</td>
-<td style="text-align:left;">
-3rd Qu.: 93.7404
-</td>
-<td style="text-align:left;">
-NA
-</td>
-</tr>
-<tr>
-<td style="text-align:left;">
-Max
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-Max. :4.494
-</td>
-<td style="text-align:left;">
-Max. : 5.712
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-Max. : 68.5706
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-NA
-</td>
-<td style="text-align:left;">
-Max. :593.45
-</td>
-<td style="text-align:left;">
-Max. :301.44
-</td>
-<td style="text-align:left;">
-Max. :142.56
-</td>
-<td style="text-align:left;">
-Max. :57.26
-</td>
-<td style="text-align:left;">
-Max. :151.64
-</td>
-<td style="text-align:left;">
-Max. :393.5634
-</td>
-<td style="text-align:left;">
-NA
-</td>
-</tr>
-</tbody>
-</table>
-<pre class="r"><code>head(stroke_df, n = 10)</code></pre>
-<pre><code>##    gender      age education currentSmoker cigsPerDay BPMeds prevalentStroke
-## 1       M 3.663562         4             0          0      0               0
-## 2       F 3.828641         2             0          0      0               0
-## 3       M 3.871201         1             1         20      0               0
-## 4       F 4.110874         3             1         30      0               0
-## 5       F 3.828641         3             1         23      0               0
-## 6       F 3.761200         2             0          0      0               0
-## 7       F 4.143135         1             0          0      0               0
-## 8       F 3.806662         2             1         20      0               0
-## 9       M 3.951244         1             0          0      0               0
-## 10      M 3.761200         1             1         30      0               0
-##    prevalentHyp diabetes totChol sysBP diaBP   BMI heartRate glucose stroke
-## 1             0        0     195 106.0    70 26.97        80      77      0
-## 2             0        0     250 121.0    81 28.73        95      76      0
-## 3             0        0     245 127.5    80 25.34        75      70      0
-## 4             1        0     225 150.0    95 28.58        65     103      1
-## 5             0        0     285 130.0    84 23.10        85      85      0
-## 6             1        0     228 180.0   110 30.30        77      99      0
-## 7             0        0     205 138.0    71 33.11        60      85      1
-## 8             0        0     313 100.0    71 21.68        79      78      0
-## 9             1        0     260 141.5    89 26.36        76      79      0
-## 10            1        0     225 162.0   107 23.61        93      88      0</code></pre>
+# Count the number of observations in each class after SMOTE
+table(test_data_balanced$stroke)</code></pre>
+<pre><code>## 
+##   0   1 
+## 579 772</code></pre>
+<pre class="r"><code>nrow(test_data_balanced)</code></pre>
+<pre><code>## [1] 1351</code></pre>
+</div>
+<div id="model-building-1-using-highly-correlated-variables" class="section level3" number="8.0.2">
+<h3><span class="header-section-number">8.0.2</span> Model building 1:
+Using highly correlated variables</h3>
+<pre class="r"><code># Fit a logistic regression model to the training data
+log_corr_model &lt;- glm(stroke ~ diaBP + sysBP + age + BMI, 
+                 family = binomial, 
+                 data = train_data)
+
+
+print(summary(log_corr_model))</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = stroke ~ diaBP + sysBP + age + BMI, family = binomial, 
+##     data = train_data)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -1.3925  -0.6071  -0.4591  -0.3429   2.7384  
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(&gt;|z|)    
+## (Intercept) -15.207006   1.388313 -10.954  &lt; 2e-16 ***
+## diaBP         0.002221   0.006707   0.331    0.741    
+## sysBP         0.015816   0.003614   4.377 1.21e-05 ***
+## age           2.790178   0.355920   7.839 4.53e-15 ***
+## BMI           0.007087   0.013218   0.536    0.592    
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 2528.9  on 2966  degrees of freedom
+## Residual deviance: 2332.8  on 2962  degrees of freedom
+## AIC: 2342.8
+## 
+## Number of Fisher Scoring iterations: 5</code></pre>
+<pre class="r"><code># Make predictions on the testing data
+test_preds &lt;- predict(log_corr_model, 
+                      newdata = test_data, 
+                      type = &quot;response&quot;)
+
+# Calculate the accuracy of the model
+test_preds_acc &lt;- ifelse(test_preds &gt; 0.5, 1, 0)</code></pre>
+<pre class="r"><code>vif(log_corr_model)</code></pre>
+<pre><code>##    diaBP    sysBP      age      BMI 
+## 2.604533 2.777396 1.181623 1.144846</code></pre>
+<p>The output of VIF (Variance Inflation Factor) provides an indication
+of the degree of multicollinearity in a regression model. A VIF value of
+1 indicates no multicollinearity, whereas higher values indicate
+increasing levels of multicollinearity. In general, VIF values above 5
+or 10 indicate a problematic level of multicollinearity.</p>
+<p>In the output you provided, each variable has a VIF value less than
+5, indicating that there is no problematic multicollinearity in the
+model. Specifically, the diaBP variable has a VIF of 2.39, the sysBP
+variable has a VIF of 2.41, the age variable has a VIF of 1.12, and the
+BMI variable has a VIF of 1.15. Therefore, the model is not suffering
+from high multicollinearity among the predictors.</p>
+<pre class="r"><code># create confusion matrix
+confusion_mat &lt;- confusionMatrix(factor(test_preds_acc, levels = c(0, 1)), 
+                               factor(test_data$stroke, levels = c(0, 1)))
+
+# print the confusion matrix
+confusion_mat$table</code></pre>
+<pre><code>##           Reference
+## Prediction    0    1
+##          0 1075  190
+##          1    3    3</code></pre>
+<p>The confusion matrix reveals the following:</p>
+<p>Class 0 (true negatives) was accurately assigned to 1075
+observations. The classification of 3 observations as true positives in
+class 1 was accurate. False positives: 190 observations were incorrectly
+classified as class 1 when they actually belong in class 0. False
+negatives: 3 observations were incorrectly classified as class 0 when
+they were actually class 1.</p>
+<pre class="r"><code># print accuracy
+accuracy &lt;- confusion_mat$overall[&#39;Accuracy&#39;]
+print(paste(&quot;Accuracy: &quot;, round(accuracy, 4) * 100, &quot;%&quot;))</code></pre>
+<pre><code>## [1] &quot;Accuracy:  84.82 %&quot;</code></pre>
+<pre class="r"><code># print precision
+precision &lt;- confusion_mat$byClass[&#39;Pos Pred Value&#39;]
+print(paste(&quot;Precision: &quot;, round(precision, 4) * 100, &quot;%&quot;))</code></pre>
+<pre><code>## [1] &quot;Precision:  84.98 %&quot;</code></pre>
+<pre class="r"><code># print recall (sensitivity)
+sensitivity &lt;- confusion_mat$byClass[&#39;Sensitivity&#39;]
+print(paste(&quot;Recall (Sensitivity): &quot;, round(sensitivity, 4) * 100, &quot;%&quot;))</code></pre>
+<pre><code>## [1] &quot;Recall (Sensitivity):  99.72 %&quot;</code></pre>
+<pre class="r"><code># print specificity
+specificity &lt;- confusion_mat$byClass[&#39;Specificity&#39;]
+print(paste(&quot;Specificity: &quot;, round(specificity, 4) * 100, &quot;%&quot;))</code></pre>
+<pre><code>## [1] &quot;Specificity:  1.55 %&quot;</code></pre>
+<pre class="r"><code># print F1 score
+f1_score &lt;- 2 * (confusion_mat$byClass[&#39;Pos Pred Value&#39;] * confusion_mat$byClass[&#39;Sensitivity&#39;]) / (confusion_mat$byClass[&#39;Pos Pred Value&#39;] + confusion_mat$byClass[&#39;Sensitivity&#39;])
+
+print(paste(&quot;F1 Score: &quot;, round(f1_score, 4) * 100, &quot;%&quot;))</code></pre>
+<pre><code>## [1] &quot;F1 Score:  91.76 %&quot;</code></pre>
+<p>Based on these values, we can compute several evaluation metrics:</p>
+<p>Accuracy: The proportion of correct predictions out of all
+predictions made. In this case, it is (1075+3)/(1075+3+190+3) =
+84.82%.</p>
+<p>Precision: The proportion of true positives out of all positive
+predictions made. In this case, it is 3/(3+190) = 84.98%.</p>
+<p>Recall (Sensitivity): The proportion of true positives out of all
+actual positive cases. In this case, it is 3/(3+3) = 99.72%.</p>
+<p>Specificity: The proportion of true negatives out of all actual
+negative cases. In this case, it is 1075/(1075+190) = 85.02%.</p>
+<p>F1 Score: The harmonic mean of precision and recall, which gives
+equal weight to both metrics. In this case, it is 2<em>(precision
+</em>recall)/(precision+recall) = 91.76%.</p>
+<p>Overall, the model has high accuracy, precision, and recall, but low
+specificity. This means that it performs well in identifying positive
+cases, but has a high rate of false positives, which could lead to
+misclassification of negative cases as positive.</p>
+</div>
+<div id="model-building-2-using-all-predictor-variables" class="section level3" number="8.0.3">
+<h3><span class="header-section-number">8.0.3</span> Model building 2:
+Using all predictor variables</h3>
+<pre class="r"><code># Fit a logistic regression full model to the training data
+log_full_model &lt;- glm(stroke ~ ., 
+                 family = binomial, 
+                 data = train_data)
+
+
+print(summary(log_full_model))</code></pre>
+<pre><code>## 
+## Call:
+## glm(formula = stroke ~ ., family = binomial, data = train_data)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -1.8653  -0.5997  -0.4306  -0.2919   2.8214  
+## 
+## Coefficients:
+##                    Estimate Std. Error z value Pr(&gt;|z|)    
+## (Intercept)      -1.643e+01  1.636e+00 -10.041  &lt; 2e-16 ***
+## genderM           4.563e-01  1.203e-01   3.793 0.000149 ***
+## age               3.019e+00  3.814e-01   7.914 2.49e-15 ***
+## education        -4.069e-02  5.545e-02  -0.734 0.463071    
+## currentSmoker1   -4.061e-02  1.714e-01  -0.237 0.812747    
+## cigsPerDay        2.521e-02  6.758e-03   3.730 0.000191 ***
+## BPMeds1           2.395e-01  2.646e-01   0.905 0.365482    
+## prevalentStroke1  1.621e+00  5.741e-01   2.824 0.004740 ** 
+## prevalentHyp1     3.500e-01  1.516e-01   2.309 0.020967 *  
+## diabetes1         2.040e-01  3.275e-01   0.623 0.533338    
+## totChol           6.760e-04  1.213e-03   0.558 0.577185    
+## sysBP             1.259e-02  4.119e-03   3.055 0.002250 ** 
+## diaBP            -1.842e-03  6.945e-03  -0.265 0.790779    
+## BMI               4.762e-03  1.406e-02   0.339 0.734919    
+## heartRate        -5.344e-04  4.576e-03  -0.117 0.907021    
+## glucose           6.121e-03  2.508e-03   2.441 0.014657 *  
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 2528.9  on 2966  degrees of freedom
+## Residual deviance: 2243.9  on 2951  degrees of freedom
+## AIC: 2275.9
+## 
+## Number of Fisher Scoring iterations: 5</code></pre>
+<pre class="r"><code># Make predictions on the testing data
+test_full_preds &lt;- predict(log_full_model, 
+                      newdata = test_data, 
+                      type = &quot;response&quot;)
+
+# Calculate the accuracy of the model
+test_full_preds_acc &lt;- ifelse(test_full_preds &gt; 0.5, 1, 0)</code></pre>
+<pre class="r"><code>vif(log_full_model)</code></pre>
+<pre><code>##          gender             age       education   currentSmoker      cigsPerDay 
+##        1.234737        1.303232        1.057484        2.504724        2.663761 
+##          BPMeds prevalentStroke    prevalentHyp        diabetes         totChol 
+##        1.091695        1.016929        1.955241        1.641212        1.063208 
+##           sysBP           diaBP             BMI       heartRate         glucose 
+##        3.457790        2.703560        1.198697        1.100871        1.633826</code></pre>
+<pre class="r"><code># create confusion matrix
+confusion_mat_full &lt;- confusionMatrix(factor(test_full_preds_acc, levels = c(0, 1)), 
+                               factor(test_data$stroke, levels = c(0, 1)))
+
+# print the confusion matrix
+confusion_mat_full$table</code></pre>
+<pre><code>##           Reference
+## Prediction    0    1
+##          0 1071  179
+##          1    7   14</code></pre>
+<pre class="r"><code># print accuracy
+full_model_accuracy &lt;- confusion_mat_full$overall[&#39;Accuracy&#39;]
+print(paste(&quot;Accuracy: &quot;, round(full_model_accuracy, 4) * 100, &quot;%&quot;))</code></pre>
+<pre><code>## [1] &quot;Accuracy:  85.37 %&quot;</code></pre>
+<pre class="r"><code># print precision
+full_model_precision &lt;- confusion_mat_full$byClass[&#39;Pos Pred Value&#39;]
+print(paste(&quot;Precision: &quot;, round(full_model_precision, 4) * 100, &quot;%&quot;))</code></pre>
+<pre><code>## [1] &quot;Precision:  85.68 %&quot;</code></pre>
+<pre class="r"><code># print recall (sensitivity)
+full_model_sensitivity &lt;- confusion_mat_full$byClass[&#39;Sensitivity&#39;]
+print(paste(&quot;Recall (Sensitivity): &quot;, round(full_model_sensitivity, 4) * 100, &quot;%&quot;))</code></pre>
+<pre><code>## [1] &quot;Recall (Sensitivity):  99.35 %&quot;</code></pre>
+<pre class="r"><code># print specificity
+full_model_specificity &lt;- confusion_mat_full$byClass[&#39;Specificity&#39;]
+print(paste(&quot;Specificity: &quot;, round(full_model_specificity, 4) * 100, &quot;%&quot;))</code></pre>
+<pre><code>## [1] &quot;Specificity:  7.25 %&quot;</code></pre>
+<pre class="r"><code># print F1 score
+full_model_f1_score &lt;- 2 * (confusion_mat_full$byClass[&#39;Pos Pred Value&#39;] * confusion_mat_full$byClass[&#39;Sensitivity&#39;]) / (confusion_mat_full$byClass[&#39;Pos Pred Value&#39;] + confusion_mat_full$byClass[&#39;Sensitivity&#39;])
+
+print(paste(&quot;F1 Score: &quot;, round(full_model_f1_score, 4) * 100, &quot;%&quot;))</code></pre>
+<pre><code>## [1] &quot;F1 Score:  92.01 %&quot;</code></pre>
+</div>
+<div id="pending-interpretation" class="section level2" number="8.1">
+<h2><span class="header-section-number">8.1</span> ??? Pending
+interpretation</h2>
+</div>
+<div id="rocauc-curve" class="section level2" number="8.2">
+<h2><span class="header-section-number">8.2</span> ROC/AUC curve</h2>
 </div>
 </div>
 

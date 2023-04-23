@@ -579,7 +579,6 @@ age_t_test
 glucose_t_test <- t.test(glucose ~ stroke, data = stroke_df)
 glucose_t_test
 ```
-
 # Conclusions:
 As we can see from the analysis with evidences, the p values for both tests are less than the level of significance (chosen 0.05), 
 and with the strong evidence from both the statistical tests, we are rejecting the null hypothesis and accepting the alternate hypothesis.
@@ -599,6 +598,7 @@ As from the distribution plot of the target variable, which clearly depicts that
 library(DMwR)
 library(caret)
 library(ROSE)
+library(car)
 
 ```
 
@@ -649,13 +649,19 @@ test_data_balanced <- SMOTE(stroke ~ .,
 table(test_data_balanced$stroke)
 
 nrow(test_data_balanced)
+
 ```
 
+### Model building 1: Using highly correlated variables
 ```{r logit_corr_model, echo = TRUE}
+
 # Fit a logistic regression model to the training data
 log_corr_model <- glm(stroke ~ diaBP + sysBP + age + BMI, 
                  family = binomial, 
                  data = train_data)
+
+
+print(summary(log_corr_model))
 
 # Make predictions on the testing data
 test_preds <- predict(log_corr_model, 
@@ -667,11 +673,9 @@ test_preds_acc <- ifelse(test_preds > 0.5, 1, 0)
 
 ```
 
+```{r vif_logit_corr_model, echo=TRUE}
 
-```{r}
-
-library(car)
-vif(logit_corr_model)
+vif(log_corr_model)
 
 ```
 
@@ -742,8 +746,81 @@ Specificity: The proportion of true negatives out of all actual negative cases.
 		  In this case, it is 1075/(1075+190) = 85.02%.
 		  
 F1 Score: The harmonic mean of precision and recall, which gives equal weight to both metrics. 
-		  In this case, it is 2*(precision*recall)/(precision+recall) = 91.76%.
+		  In this case, it is 2*(precision *recall)/(precision+recall) = 91.76%.
 		  
 Overall, the model has high accuracy, precision, and recall, but low specificity. 
 This means that it performs well in identifying positive cases, but has a high rate of false positives, which could lead to misclassification of negative cases as positive.
+
+### Model building 2: Using all predictor variables
+```{r logit_full_model, echo = TRUE}
+
+# Fit a logistic regression full model to the training data
+log_full_model <- glm(stroke ~ ., 
+                 family = binomial, 
+                 data = train_data)
+
+
+print(summary(log_full_model))
+
+# Make predictions on the testing data
+test_full_preds <- predict(log_full_model, 
+                      newdata = test_data, 
+                      type = "response")
+
+# Calculate the accuracy of the model
+test_full_preds_acc <- ifelse(test_full_preds > 0.5, 1, 0)
+
+```
+
+
+```{r vif_log_full_model, echo=TRUE}
+
+vif(log_full_model)
+
+```
+
+
+```{r logit_full_model_conf_metrics, echo = TRUE}
+
+# create confusion matrix
+confusion_mat_full <- confusionMatrix(factor(test_full_preds_acc, levels = c(0, 1)), 
+                               factor(test_data$stroke, levels = c(0, 1)))
+
+# print the confusion matrix
+confusion_mat_full$table
+
+```
+
+
+```{r logit_full_model_evaluation_metrics, echo = TRUE}
+
+# print accuracy
+full_model_accuracy <- confusion_mat_full$overall['Accuracy']
+print(paste("Accuracy: ", round(full_model_accuracy, 4) * 100, "%"))
+
+# print precision
+full_model_precision <- confusion_mat_full$byClass['Pos Pred Value']
+print(paste("Precision: ", round(full_model_precision, 4) * 100, "%"))
+
+# print recall (sensitivity)
+full_model_sensitivity <- confusion_mat_full$byClass['Sensitivity']
+print(paste("Recall (Sensitivity): ", round(full_model_sensitivity, 4) * 100, "%"))
+
+# print specificity
+full_model_specificity <- confusion_mat_full$byClass['Specificity']
+print(paste("Specificity: ", round(full_model_specificity, 4) * 100, "%"))
+
+# print F1 score
+full_model_f1_score <- 2 * (confusion_mat_full$byClass['Pos Pred Value'] * confusion_mat_full$byClass['Sensitivity']) / (confusion_mat_full$byClass['Pos Pred Value'] + confusion_mat_full$byClass['Sensitivity'])
+
+print(paste("F1 Score: ", round(full_model_f1_score, 4) * 100, "%"))
+
+```
+
+
+## ??? Pending interpretation
+## ROC/AUC curve
+```{r}
+
+```
 
