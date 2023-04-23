@@ -603,145 +603,147 @@ library(ROSE)
 ```
 
 
-```{r echo = TRUE}
+```{r train_test_data_split, echo = TRUE}
 
-# set.seed(123) # Set a seed for reproducibility
-# train_idx <- createDataPartition(stroke_df$stroke, p = 0.67, list = FALSE)
-# train_data <- stroke_df[train_idx, ]
-# test_data <- stroke_df[-train_idx, ]
-
-```
-
-
-```{r}
-
-# train_data_balanced <- SMOTE(stroke ~ ., train_data, perc.over = 100, k = 5)
-# test_data_balanced <- SMOTE(stroke ~ ., test_data, perc.over = 100, k = 5)
-
-```
-
-
-```{r}
-# ggplot(train_data_balanced, aes(x = stroke)) +
-#   geom_bar(aes(fill = ..count..)) +
-#   scale_fill_gradient("Count", low = "#F0E442", high = "#999999") +
-#   labs(x = "stroke", y = "Count of People", title = "Distribution of Target in Train")
-
-```
-
-
-```{r}
-# ggplot(test_data_balanced, aes(x = stroke)) +
-#   geom_bar(aes(fill = ..count..)) +
-#   scale_fill_gradient("Count", low = "#F0E442", high = "#999999") +
-#   labs(x = "stroke", y = "Count of People", title = "Distribution of Target in Test")
-
-```
-# Note:
-## Combining the over-sampled data with the original data: 
-Once the process of over-sampling the training data is complete, combining it with the original data to increase the number of observations.
-
-
-
-```{r bind_ovdata_orgdata, echo = TRUE}
-
-# stroke_df_balanced <- rbind(train_data_balanced, stroke_df[-train_idx, ])
-# stroke_df_balanced <- rbind(test_data_balanced, stroke_df[train_idx, ])
-
-```
-
-
-```{r re_sampling_SMOTE, echo = TRUE}
-
-# Check the balance of the target variable in the original data
-table(stroke_df$stroke)
-
-# Perform oversampling using the ROSE package
-stroke_df_balanced <- ROSE(stroke ~ ., 
-                         data = stroke_df, 
-                         seed = 123, 
-                         N = nrow(stroke_df) + sum(stroke_df$stroke == 1))$data
-
-# stroke_df_balanced <- stroke_df_balanced_og
-# Check the balance of the target variable in the oversampled data
-table(stroke_df_balanced$stroke)
-
-```
-
-The above code returns the balanced dataframe using over-sampling technique which equalize the matches of target variable categories.
-
-## Summary after data-transforming
-```{r summary_after_data_transformation}
-
-# To get the summary statistics of the balanced dataset
-
-xkablesummary(stroke_df_balanced,
-  title = "Table : Statistical Summary after balancing dataframe",
-  pos = "center",
-  bso = "hover"
-)
-
-```
-
-
-```{r balanced_target_var_plot, echo = TRUE}
-
-# Define a custom color palette
-colors <- c("#009E73", "#CC79A7")
-
-# Create the plot
-
-ggplot(stroke_df_balanced, aes(x = stroke)) +
-  geom_bar(aes(fill = ..count..), stat = "count") +
-  geom_text(aes(label = ..count..), stat = "count", vjust = -0.5) +
-  scale_fill_gradient("Count", low = colors[1], high = colors[2]) +
-  expand_limits(x = c(0, 1)) +
-  labs(x = "Stroke", y = "Count of People", title = "Distribution of Target Variable (Stroke)") +
-  theme_classic() +
-  theme(legend.position = "none")
-
-```
-
-
-
-```{r correlation_plot, echo = TRUE}
-
-
-```
-```{r}
-stroke_df_balanced.data = glm(formula = stroke ~ ., 
-                              data = stroke_df_balanced, 
-                              family = binomial)
-
-print(summary(stroke_df_balanced.data))
-```
-
-```{r train_test_split, echo = TRUE}
-
-# Split the data into training and testing sets
 set.seed(123)
 
-train_index <- sample(nrow(stroke_df_balanced), 0.7 * nrow(stroke_df_balanced))
-train <- data[train_index, ]
-test <- data[-train_index, ]
+train_index <- createDataPartition(stroke_df$stroke, p = 0.7, 
+                                   list = FALSE, times = 1)
+train_data <- stroke_df[train_index, ]
+test_data <- stroke_df[-train_index, ]
 
-# Build a logistic regression model
-model <- glm(stroke ~ ., 
-             data = stroke_df_balanced, 
-             family = "binomial")
+```
 
-# Make predictions on the testing set
-predictions <- predict(model, newdata = test, type = "response")
+Since the classes are not balanced (0=3594, 1=644), I will use SMOTE to balance them since if we treat them as they are, our model will predict on the class that is in the majority, which will be biased.
+
+
+```{r train_data_SMOTE, echo=TRUE}
+
+# Count the number of observations in each class before SMOTE
+table(train_data$stroke)
+
+# Apply SMOTE to balance the classes
+train_data_balanced <- SMOTE(stroke ~ ., 
+                             train_data, 
+                             perc.over = 300, 
+                             perc.under = 100)
+
+# Count the number of observations in each class after SMOTE
+table(train_data_balanced$stroke)
+
+nrow(train_data_balanced)
+```
+
+```{r test_data_SMOTE, echo=TRUE}
+
+# Count the number of observations in each class before SMOTE
+table(test_data$stroke)
+
+# Apply SMOTE to balance the classes
+test_data_balanced <- SMOTE(stroke ~ ., 
+                             test_data, 
+                             perc.over = 300, 
+                             perc.under = 100)
+
+# Count the number of observations in each class after SMOTE
+table(test_data_balanced$stroke)
+
+nrow(test_data_balanced)
+```
+
+```{r logit_corr_model, echo = TRUE}
+# Fit a logistic regression model to the training data
+log_corr_model <- glm(stroke ~ diaBP + sysBP + age + BMI, 
+                 family = binomial, 
+                 data = train_data)
+
+# Make predictions on the testing data
+test_preds <- predict(log_corr_model, 
+                      newdata = test_data, 
+                      type = "response")
+
+# Calculate the accuracy of the model
+test_preds_acc <- ifelse(test_preds > 0.5, 1, 0)
 
 ```
 
 
-```{r model_evaluation, echo = TRUE}
+```{r}
 
-# Evaluate the performance of the model
-
-library(caret)
-confusionMatrix(predictions > 0.5, test$stroke)
+library(car)
+vif(logit_corr_model)
 
 ```
+
+
+The output of VIF (Variance Inflation Factor) provides an indication of the degree of multicollinearity in a regression model. 
+A VIF value of 1 indicates no multicollinearity, whereas higher values indicate increasing levels of multicollinearity. 
+In general, VIF values above 5 or 10 indicate a problematic level of multicollinearity.
+
+In the output you provided, each variable has a VIF value less than 5, indicating that there is no problematic multicollinearity in the model. Specifically, the diaBP variable has a VIF of 2.39, the sysBP variable has a VIF of 2.41, the age variable has a VIF of 1.12, and the BMI variable has a VIF of 1.15. Therefore, the model is not suffering from high multicollinearity among the predictors.
+
+
+```{r logit_corr_model_conf_metrics, echo = TRUE}
+
+# create confusion matrix
+confusion_mat <- confusionMatrix(factor(test_preds_acc, levels = c(0, 1)), 
+                               factor(test_data$stroke, levels = c(0, 1)))
+
+# print the confusion matrix
+confusion_mat$table
+
+```
+
+The confusion matrix reveals the following:
+
+Class 0 (true negatives) was accurately assigned to 1075 observations.
+The classification of 3 observations as true positives in class 1 was accurate.
+False positives: 190 observations were incorrectly classified as class 1 when they actually belong in class 0.
+False negatives: 3 observations were incorrectly classified as class 0 when they were actually class 1.
+
+
+```{r logit_corr_model_evaluation_metrics, echo = TRUE}
+
+# print accuracy
+accuracy <- confusion_mat$overall['Accuracy']
+print(paste("Accuracy: ", round(accuracy, 4) * 100, "%"))
+
+# print precision
+precision <- confusion_mat$byClass['Pos Pred Value']
+print(paste("Precision: ", round(precision, 4) * 100, "%"))
+
+# print recall (sensitivity)
+sensitivity <- confusion_mat$byClass['Sensitivity']
+print(paste("Recall (Sensitivity): ", round(sensitivity, 4) * 100, "%"))
+
+# print specificity
+specificity <- confusion_mat$byClass['Specificity']
+print(paste("Specificity: ", round(specificity, 4) * 100, "%"))
+
+# print F1 score
+f1_score <- 2 * (confusion_mat$byClass['Pos Pred Value'] * confusion_mat$byClass['Sensitivity']) / (confusion_mat$byClass['Pos Pred Value'] + confusion_mat$byClass['Sensitivity'])
+
+print(paste("F1 Score: ", round(f1_score, 4) * 100, "%"))
+
+```
+
+Based on these values, we can compute several evaluation metrics:
+
+Accuracy: The proportion of correct predictions out of all predictions made. 
+		  In this case, it is (1075+3)/(1075+3+190+3) = 84.82%.
+		  
+Precision: The proportion of true positives out of all positive predictions made. 
+		  In this case, it is 3/(3+190) = 84.98%.
+		  
+Recall (Sensitivity): The proportion of true positives out of all actual positive cases. 
+		  In this case, it is 3/(3+3) = 99.72%.
+		  
+Specificity: The proportion of true negatives out of all actual negative cases. 
+		  In this case, it is 1075/(1075+190) = 85.02%.
+		  
+F1 Score: The harmonic mean of precision and recall, which gives equal weight to both metrics. 
+		  In this case, it is 2*(precision*recall)/(precision+recall) = 91.76%.
+		  
+Overall, the model has high accuracy, precision, and recall, but low specificity. 
+This means that it performs well in identifying positive cases, but has a high rate of false positives, which could lead to misclassification of negative cases as positive.
 
