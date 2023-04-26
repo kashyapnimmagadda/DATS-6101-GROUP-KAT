@@ -821,6 +821,21 @@ print(paste("F1 Score: ", round(full_model_f1_score, 4) * 100, "%"))
 ## ??? Pending interpretation
 ## ROC/AUC curve
 ```{r}
+# predicted data
+
+library(pROC)
+ 
+# create roc curve
+roc_object <- roc( test_data$stroke, test_preds)
+ 
+# calculate area under curve
+auc(roc_object)
+
+# plot the ROC curve
+plot(roc_object, main="ROC Curve", print.auc=TRUE, legacy.axes=TRUE)
+
+```
+```{r}
 
 ```
 
