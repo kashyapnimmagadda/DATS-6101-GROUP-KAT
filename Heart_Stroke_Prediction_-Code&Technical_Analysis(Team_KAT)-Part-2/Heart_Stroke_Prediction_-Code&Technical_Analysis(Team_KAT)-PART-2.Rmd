@@ -241,14 +241,10 @@ ggplot(stroke_df, aes(x = age)) +
 ### Density plot of Age
 ```{r variable_dist_age, include=TRUE, echo=TRUE}
 
-ggplot(stroke_df, aes(x = age)) +
-  geom_density(
-    fill = "skyblue",
-    color = "skyblue",
-    alpha = 0.5
-  ) +
-  theme_bw() +
-  theme() +
+ggplot(stroke_df, aes(x=age)) +
+    geom_density(colour="white", fill="yellow",alpha=0.5) +
+    geom_vline(aes(xintercept=mean(age, na.rm=T)),   # Ignore NA values for mean
+               color="red", linetype="dashed",size=1) +
   ggtitle("Distribution for age")
 
 ```
@@ -260,10 +256,11 @@ This density plot is showing a smooth line which represents the density of age v
 ```{r variable_dist_BMI, include=TRUE, echo=TRUE}
 ggplot(stroke_df, aes(x = BMI)) +
   geom_density(
-    fill = "blue",
-    color = "blue",
+    fill = "black",
+    color = "#6A3D9A",
     alpha = 0.5
-  ) +
+  ) +geom_vline(aes(xintercept=mean(BMI, na.rm=T)),   # Ignore NA values for mean
+               color="#FEB6DB", linetype="dashed",size=1)
   theme_bw() +
   theme() +
   ggtitle("Distribution for BMI")
@@ -278,10 +275,10 @@ ggplot(stroke_df, aes(x = glucose)) +
     fill = "brown",
     color = "brown",
     alpha = 0.5
-  ) +
+  ) +geom_vline(aes(xintercept=mean(glucose, na.rm=T)),   # Ignore NA values for mean
+               color="black", linetype="dashed",size=1)
   ggtitle("Distribution for Glucose Level") +
-  theme_bw() +
-  theme()
+  theme_bw()+theme()
 ```
 
 
