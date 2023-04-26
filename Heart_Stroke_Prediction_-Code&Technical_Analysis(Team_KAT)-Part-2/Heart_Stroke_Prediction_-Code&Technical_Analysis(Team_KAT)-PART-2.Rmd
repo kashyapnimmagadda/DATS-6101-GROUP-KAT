@@ -221,16 +221,6 @@ stroke_df$age <- log(stroke_df$age)
 
 shapiro.test(stroke_df$age)
 
-ggplot(stroke_df, aes(x = age)) +
-  geom_density(
-    fill = "skyblue",
-    color = "skyblue",
-    alpha = 0.5
-  ) +
-  theme_bw() +
-  theme() +
-  ggtitle("Distribution for age")
-
 ```
 
 
