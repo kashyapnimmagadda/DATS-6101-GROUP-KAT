@@ -589,6 +589,8 @@ library(car)
 
 ```
 
+These lines of code are used to split the dataset into training and testing sets using the createDataPartition function from the caret package in R.
+createDataPartition function is used to create a stratified random sample of the stroke variable, with a 70/30 split for the training and testing datasets respectively. 
 
 ```{r train_test_data_split, echo = TRUE}
 
@@ -621,6 +623,10 @@ table(train_data_balanced$stroke)
 nrow(train_data_balanced)
 ```
 
+Before applying SMOTE, there were 2516 observations with stroke=0 and 451 observations with stroke=1 in the training data. After applying SMOTE to balance the classes, there were 1353 observations with stroke=0 and 1804 observations with stroke=1 in the balanced training data.
+
+The total number of observations in the balanced training data is 3157, which is higher than the original training data because SMOTE creates synthetic data points to balance the classes.
+
 ```{r test_data_SMOTE, echo=TRUE}
 
 # Count the number of observations in each class before SMOTE
@@ -638,6 +644,8 @@ table(test_data_balanced$stroke)
 nrow(test_data_balanced)
 
 ```
+
+After applying SMOTE to balance the classes in the test data, the resulting number of observations in each class is 579 and 772 for stroke = 0 and stroke = 1 respectively. There are a total of 1351 observations in the test data after SMOTE.
 
 ### Model building 1: Using highly correlated variables
 ```{r logit_corr_model, echo = TRUE}
@@ -660,6 +668,15 @@ test_preds_acc <- ifelse(test_preds > 0.5, 1, 0)
 
 ```
 
+The summary of the logistic regression model fitted on the training data shows the following:
+
+The intercept has a negative estimate of -15.207006, which means that for a person with all predictor variables equal to zero, the log odds of having a stroke is -15.207006.
+Age has a positive estimate of 2.790178, which indicates that as age increases by one unit, the log odds of having a stroke increase by 2.790178.
+SysBP has a positive estimate of 0.015816, indicating that as systolic blood pressure increases by one unit, the log odds of having a stroke increase by 0.015816.
+The estimates for diaBP and BMI are not statistically significant, as their p-values are greater than 0.05.
+
+Overall, the model suggests that age and systolic blood pressure are significant predictors of stroke, while diastolic blood pressure and BMI are not significant predictors.
+
 ```{r vif_logit_corr_model, echo=TRUE}
 
 vif(log_corr_model)
@@ -671,8 +688,7 @@ The output of VIF (Variance Inflation Factor) provides an indication of the degr
 A VIF value of 1 indicates no multicollinearity, whereas higher values indicate increasing levels of multicollinearity. 
 In general, VIF values above 5 or 10 indicate a problematic level of multicollinearity.
 
-In the output you provided, each variable has a VIF value less than 5, indicating that there is no problematic multicollinearity in the model. Specifically, the diaBP variable has a VIF of 2.39, the sysBP variable has a VIF of 2.41, the age variable has a VIF of 1.12, and the BMI variable has a VIF of 1.15. Therefore, the model is not suffering from high multicollinearity among the predictors.
-
+In this case, all VIF values are less than 5, which indicates that there is not a significant problem with multicollinearity in the model.
 
 ```{r logit_corr_model_conf_metrics, echo = TRUE}
 
@@ -685,12 +701,12 @@ confusion_mat$table
 
 ```
 
-The confusion matrix reveals the following:
+The confusion matrix shows the number of true positives, false positives, true negatives, and false negatives for the logistic regression model's predictions on the test data.
 
-Class 0 (true negatives) was accurately assigned to 1075 observations.
-The classification of 3 observations as true positives in class 1 was accurate.
-False positives: 190 observations were incorrectly classified as class 1 when they actually belong in class 0.
-False negatives: 3 observations were incorrectly classified as class 0 when they were actually class 1.
+True positives (TP): The model correctly predicted 3 cases with a stroke.
+False positives (FP): The model predicted 3 cases with a stroke, but in reality, those patients did not have a stroke.
+True negatives (TN): The model correctly predicted 1075 cases without a stroke.
+False negatives (FN): The model predicted 190 cases as not having a stroke, but they did have a stroke.
 
 
 ```{r logit_corr_model_evaluation_metrics, echo = TRUE}
@@ -759,6 +775,18 @@ test_full_preds_acc <- ifelse(test_full_preds > 0.5, 1, 0)
 
 ```
 
+Based on the summary output, we can see that several variables are statistically significant in predicting stroke based on the p-values of their corresponding coefficients (i.e., have p-values less than 0.05). These variables are:
+
+gender
+age
+cigsPerDay
+prevalentStroke
+prevalentHyp
+sysBP
+glucose
+The coefficients of these variables have positive values, except for prevalentStroke, which has a positive coefficient value, indicating that as the values of these variables increase, the likelihood of having a stroke also increases.
+
+However, we should note that some variables are not statistically significant, such as education, currentSmoker, BPMeds, diabetes, totChol, diaBP, BMI, and heartRate, as their p-values are greater than 0.05.
 
 ```{r vif_log_full_model, echo=TRUE}
 
@@ -766,6 +794,7 @@ vif(log_full_model)
 
 ```
 
+From the VIF values, we can see that the highest VIF is for sysBP at 3.46, indicating that it has moderate collinearity with other predictors in the model. However, all the VIF values are below the commonly accepted threshold of 5, indicating that multicollinearity is not a major concern in this model.
 
 ```{r logit_full_model_conf_metrics, echo = TRUE}
 
@@ -778,6 +807,7 @@ confusion_mat_full$table
 
 ```
 
+From this confusion matrix, we can see that the model predicted 1071 true negatives, 14 true positives, 179 false negatives, and 7 false positives.
 
 ```{r logit_full_model_evaluation_metrics, echo = TRUE}
 
@@ -804,9 +834,18 @@ print(paste("F1 Score: ", round(full_model_f1_score, 4) * 100, "%"))
 
 ```
 
+Based on the confusion matrix, we can calculate several performance metrics:
 
-## ??? Pending interpretation
-## ROC/AUC curve
+Accuracy: the proportion of correctly classified observations over the total number of observations. The accuracy of the full model is 85.37%, which means that 85.37% of the stroke cases were correctly classified.
+
+Precision: the proportion of true stroke cases over all predicted stroke cases. The precision of the full model is 85.68%, which means that 85.68% of the predicted stroke cases were actually stroke cases.
+
+Recall (Sensitivity): the proportion of true stroke cases over all actual stroke cases. The recall of the full model is 99.35%, which means that 99.35% of the actual stroke cases were correctly identified by the model.
+
+Specificity: the proportion of true non-stroke cases over all actual non-stroke cases. The specificity of the full model is 7.25%, which means that only 7.25% of the actual non-stroke cases were correctly identified by the model.
+
+F1 Score: the harmonic mean of precision and recall. The F1 score of the full model is 92.01%, which provides a balanced view of the model's performance in terms of both precision and recall.
+
 ```{r}
 # predicted data
 
@@ -822,6 +861,9 @@ auc(roc_object)
 plot(roc_object, main="ROC Curve", print.auc=TRUE, legacy.axes=TRUE)
 
 ```
+
+An AUC of 0.5 indicates that the model is no better than random guessing, while an AUC of 1.0 indicates perfect predictive power.
+The AUC (Area Under the Curve) of the ROC (Receiver Operating Characteristic) curve is 0.7119, indicating that the model has a moderate ability to distinguish between stroke and non-stroke cases.
 ```{r}
 
 ```
