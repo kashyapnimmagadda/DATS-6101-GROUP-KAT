@@ -19,6 +19,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 
 ```{r basic_libraries, include=FALSE}
+
 # Importing required libraries for the EDA.
 library(ezids)
 library(ggplot2)
@@ -26,6 +27,7 @@ library(ROSE)
 library(tidyverse)
 library(conflicted)
 library(dplyr)
+
 ```
 
 # Introduction
@@ -71,8 +73,10 @@ stroke_df <- read.csv(url(github_file_path))
 ## Sample record elements of stroke dataframe
 
 head(stroke_df, n = 2)
-```{r head_2_csv, include=TRUE, echo=TRUE}
-head(stroke_df, n = 2)
+```{r head_4_csv, include=TRUE, echo=TRUE}
+
+head(stroke_df, n = 4)
+
 ```
 
 # Summary of the dataset
@@ -99,10 +103,13 @@ summary(stroke_df)
 
 # Data Cleaning - Checking for null values
 ```{r find_na_fix, include=TRUE, echo=TRUE}
+
 paste("The NA's in the dataset is:", sum(is.na(stroke_df)))
+
 ```
 
 ```{r na_fix, include=TRUE, echo=TRUE}
+
 # Replacing cigsPerDay NA values with mean value
 stroke_df$cigsPerDay[is.na(stroke_df$cigsPerDay)] <-
   mean(stroke_df$cigsPerDay, na.rm = TRUE)
@@ -140,10 +147,12 @@ stroke_df$totChol[is.na(stroke_df$totChol)] <-
 
 
 paste("The NA's in the dataset after replacing null values is:", sum(is.na(stroke_df)))
+
 ```
 
 ## Summary after data-cleaning
 ```{r summary_after cleaning}
+
 # To get the summary statistics of the dataset
 
 xkablesummary(stroke_df,
@@ -200,7 +209,7 @@ dat$BMI.cat <-
   )
 dat$gluc.cat <-
   factor(dat$gluc.cat,
-    levels = c("Below 60", "60 - 90", "90 - 120", "120 - 180", "180 - 273")
+    levels = c("Below 60", "60 - 90", "90 - 120", "120 - 180", "180 - 273", "Above 273")
   )
 dat$age.cat <-
   factor(dat$age.cat,
@@ -208,32 +217,24 @@ dat$age.cat <-
   )
 
 dat_1 <- subset(dat, stroke == 1)
+
 ```
 
 ```{r}
 # Shapiro test to check data distribution
+
 shapiro.test(stroke_df$age)
+
 ```
 
 ```{r}
+
 # Age variable transformation
 stroke_df$age <- log(stroke_df$age)
 
 shapiro.test(stroke_df$age)
 
-ggplot(stroke_df, aes(x = age)) +
-  geom_density(
-    fill = "skyblue",
-    color = "skyblue",
-    alpha = 0.5
-  ) +
-  theme_bw() +
-  theme() +
-  ggtitle("Distribution for age")
-
 ```
-
-
 
 # Plots
 ## Univariate analysis.
@@ -258,6 +259,7 @@ This density plot is showing a smooth line which represents the density of age v
 
 ### Density plot for BMI
 ```{r variable_dist_BMI, include=TRUE, echo=TRUE}
+
 ggplot(stroke_df, aes(x = BMI)) +
   geom_density(
     fill = "blue",
@@ -267,12 +269,14 @@ ggplot(stroke_df, aes(x = BMI)) +
   theme_bw() +
   theme() +
   ggtitle("Distribution for BMI")
+
 ```
 
 This density plot depicts a smooth line which represents the density of BMI values in our dataset. The higher the peak of the line, the more values there are in that range. Conversely, the lower the peak, the fewer values there are in that range. From this plot, within the BMI range of 20 to 30, with a peak value of 25 BMI, more observations are recorded.
 
 ### Density plot for glucose
 ```{r variable_dist_glucose, include=TRUE, echo=TRUE}
+
 ggplot(stroke_df, aes(x = glucose)) +
   geom_density(
     fill = "brown",
@@ -282,6 +286,7 @@ ggplot(stroke_df, aes(x = glucose)) +
   ggtitle("Distribution for Glucose Level") +
   theme_bw() +
   theme()
+
 ```
 
 
@@ -289,6 +294,7 @@ The above density plot represents the distribution of glucose level of all the p
 
 ### Bar plot to count the number of Males and Females in the Dataset
 ```{r variable_dist_gender, include=TRUE, echo=TRUE}
+
 ggplot(stroke_df, aes(x = gender, fill = gender)) +
   geom_bar() +
   ggtitle("Count of Male and Female in the Dataset") +
@@ -297,16 +303,19 @@ ggplot(stroke_df, aes(x = gender, fill = gender)) +
   xlab("Gender") +
   ylab("Count of people") +
   scale_fill_discrete(name = "gender", labels = c("F - Female", "M - Male"))
+
 ```
 
 This bar chart represents the gender distribution of all the patients in the dataset. It shows the count of male and female patients. We have around 2400 female records and 1800 male records in the dataframe.
 
 ## Distribution of the target variable (stroke)
 ```{r target_var, include=TRUE, echo=TRUE}
+
 ggplot(stroke_df, aes(x = stroke)) +
   geom_bar(aes(fill = ..count..)) +
   scale_fill_gradient("Count", low = "#F0E442", high = "#999999") +
   labs(x = "stroke", y = "Count of People", title = "Distribution of Target variable (stroke)")
+
 ```
 
 This bar plot illustrates the distribution of the target variable (stroke - which means the ten year risk of coronary heart disease). Labels represents 0 - as records of people with no-stroke and 1 - as records of people with stroke. From the graph, it is shown as the dataset we have is imbalanced data which address our 2nd smart question - which leads further investigations and modifying the data using sampling techniques such as under-sampling and over-sampling.
@@ -314,26 +323,35 @@ This bar plot illustrates the distribution of the target variable (stroke - whic
 
 ## Multi-Variate analysis.
 ### BMI vs stroke 
-```{r}
-ggplot(stroke_1, aes(x = BMI, 
-                     fill = stroke)) +
+```{r BMI_stroke, echo = TRUE}
+
+ggplot(stroke_1, aes(x = BMI, fill = stroke)) +
   geom_histogram(
     color = "#e9ecef",
     alpha = 0.6,
-    position = "identity", 
+    position = "identity"
   ) +
+  geom_density(alpha = 0.3, linetype = "dashed", size = 1.2) +
+  geom_vline(xintercept = mean(stroke_1$BMI), linetype = "dotted", size = 1.2) +
+  ggtitle("BMI vs Stroke") +
   theme_bw() +
   theme() +
-  ggtitle("BMI vs Stroke") +
   scale_fill_discrete(name = "stroke", labels = c("1 - Yes"))
+
 ```
 
 This box plot is plotted between BMI and the number of persons affected by heart stroke. According to the graph, those with BMIs ranging from 20 to 30 are the more people who effected by the heart attack.
 
+
 ### Does it depend based on the gender?
 ```{r gender_smoking, include=TRUE, echo=TRUE}
+
 # seeing if gender has any affect on stroke based on smoking and Age
+
+# For female stroke data
 ggplot(stroke_1_female, aes(x = age, fill = currentSmoker)) +
+  geom_density(alpha = 0.5) +
+  geom_vline(aes(xintercept = mean(age)), color = "red") +
   geom_bar(position = "dodge") +
   ggtitle("Distribution of females who had a stroke based on their smoking habits") +
   theme_bw() +
@@ -341,14 +359,17 @@ ggplot(stroke_1_female, aes(x = age, fill = currentSmoker)) +
   xlab("Age") +
   ylab("Count of people ")
 
-
+# For male stroke data
 ggplot(stroke_1_male, aes(x = age, fill = currentSmoker)) +
+  geom_density(alpha = 0.5) +
+  geom_vline(aes(xintercept = mean(age)), color = "red") +
   geom_bar(position = "dodge") +
   ggtitle("Distribution of males who had a stroke based on their smoking habits") +
   theme_bw() +
   theme() +
   xlab("Age") +
   ylab("Count of people ")
+
 ```
 
 
@@ -356,16 +377,29 @@ As seen in the graph above, the key causes that caused a stroke in females were 
 
 Whereas in males, the reason for stroke was due to the current smoking habit.
 
+
 ### Does age has significant effect on the stroke?
 ```{r age_stroke_1, include=TRUE, echo=TRUE}
+
 # seeing if age has effect in stroke
 
-ggplot(stroke_1, aes(x = age, fill = stroke)) +
-  geom_density(alpha = 0.3) +
+ggplot(stroke_df, aes(x = age, fill = stroke)) +
+  geom_bar() +
   ggtitle("Density plot for age of people who had stroke") +
   theme_bw() +
   theme() +
-  scale_fill_discrete(name = "stroke", labels = c("1 - Yes"))
+  scale_fill_discrete(name = "stroke", labels = c("0 - No", "1 - Yes"))
+
+ggplot(stroke_df, aes(x = age, fill = stroke)) +
+  geom_density(alpha = 0.3, linewidth = 1.2) +
+  geom_vline(xintercept = mean(stroke_df$age), linetype = "dashed", linewidth = 1.2) +
+  ggtitle("Density plot for age of people who had stroke") +
+  theme_bw() +
+  theme() +
+  scale_fill_discrete(name = "stroke", labels = c("0 - No", "1 - Yes"))
+
+
+
 ```
 
 In general, we know that as one gets older, the likelihood of contracting an illness increases. 
@@ -374,11 +408,13 @@ We wanted to see if this statement held true with our dataset. The above graph c
 
 ### Does BMI with age cause stroke?
 ```{r age_bmi, include=TRUE, echo=TRUE}
+
 # how bmi and age is stroke in people
 ggplot(stroke_1, aes(x = BMI, y = age, color = stroke)) +
   geom_boxplot(size = 3) +
   ggtitle("Scatter plot for age vs bmi for people who had a stroke") +
   scale_fill_discrete(name = "stroke", labels = c("1 - Yes"))
+
 ```
 
 
@@ -395,6 +431,7 @@ The categories are encoded as:
 
 ### BMI-categories vs Age.
 ```{r age_bmi.cat, include=TRUE, echo=TRUE}
+
 dat_1 <- subset(dat, stroke == 1)
 
 # boxplot to see if bmi along with age has anything to do with stroke
@@ -402,6 +439,7 @@ ggplot(dat_1, aes(x = BMI.cat, y = age, fill = stroke)) +
   geom_boxplot() +
   ggtitle("Boxplot for Age vs BMI(categorical)") +
   scale_fill_discrete(name = "stroke", labels = c("1 - Yes"))
+
 ```
 
 
@@ -411,20 +449,24 @@ We converted BMI as a categorical variable into several groups like (underweight
 
 ### Does age with glucose level affect stroke?
 ```{r age_glucose, include=TRUE, echo=TRUE}
+
 # seeing if average glucose level with age has an effect on stroke
 
 ggplot(dat_1, aes(fill = stroke, y = age, x = gluc.cat)) +
   geom_boxplot() +
   ggtitle("Boxplot for Age vs Gluclose level(Categorical) for people with stroke") +
   scale_fill_discrete(name = "stroke", labels = c("1 - Yes"))
+
 ```
 
 The box plot is for the combination of age versus gluclose, where the gluclose variable is translated as a categorical variable into several categories like as (Below 60, 60-90, 90-120, 180-273). 
 
 Those with gluclose levels above 90 and ages 50 to 60 are more likely to have a heart attack.
 
+
 ### Does age cause hypertension?
 ```{r age_hypertension, include=TRUE, echo=TRUE}
+
 # seeing if a person can get hypertension with age
 
 ggplot(data = stroke_1, aes(
@@ -435,6 +477,7 @@ ggplot(data = stroke_1, aes(
   geom_boxplot() +
   labs(title = "Age distribution by hypertension", x = "hypertension", y = "age") +
   scale_fill_discrete(name = "stroke", labels = c("1 - Yes"))
+
 ```
 
 This Box plot that we created for the combination of hypertension and age (the person who was affected by heart stroke), where hypertension - 0 represents people who did not have hypertension and hypertension-1 represents people who did have hypertension. 
@@ -443,36 +486,43 @@ According to the graph,those who in the age netween 50 to 60 years and  those wi
 
 ### Does BMI alone cause stroke?
 ```{r BMI_stroke_1, include=TRUE, echo=TRUE}
+
 # BMI category vs stroke count
 
 ggplot(dat_1, aes(x = BMI.cat, fill = stroke)) +
   geom_bar() +
   labs(x = "BMI Category", y = "Count", title = "Distribution of Stroke Cases by BMI Category") +
   scale_fill_discrete(name = "stroke", labels = c("1 - Yes"))
+
 ```
 
 This bar plot that we plotted for BMI and the person who effected with heart stroke. 
 
 We converted BMI as a categorical variable into several groups like (underweight, normal, overweight,obesity,severe obesity) as per our observation the people who are in the overweight category are the most people who had influenced heart attack.
 
+
 ### Distribution of Age by Stroke Status.
 ```{r stroke_1_age, include=TRUE, echo=TRUE}
-ggplot(stroke_1, aes(x = age, fill = stroke)) +
+
+ggplot(stroke_df, aes(x = age, fill = stroke)) +
   geom_histogram(binwidth = 5, position = "dodge") +
   labs(x = "Age", y = "Count", title = "Distribution of Age by Stroke Status") +
   scale_x_continuous(breaks = seq(0, 100, by = 5)) +
   scale_fill_discrete(name = "stroke", labels = c("1 - Yes"))
+
 ```
 
 This histogram plot type was created for the combination of age and stroke count; it informs us that the older we get, the more individuals are affected by stroke.
 
 ### Does BMI and Glucose together cause stroke?
 ```{r BMI_glucose_stroke_1, include=TRUE, echo=TRUE}
+
 ggplot(stroke_1, aes(x = BMI, y = glucose, color = stroke)) +
   geom_point(alpha = 0.7) +
   labs(x = "BMI", y = "Glucose Level", title = "Relationship between BMI and Glucose Levels who had stroke") +
   scale_color_manual(values = c("lightblue", "red")) +
   scale_color_discrete(name = "stroke", labels = c("1 - Yes"))
+
 ```
 
 This scatter plot depicts the relationship between BMI and Glucose level in stroke patients. 
@@ -482,6 +532,7 @@ In the plot, the x-axis (BMI) ranges from 0 to 60 and y-axis (glucose level) ran
 
 ### How sysBP and diaBP along with age groups together cause stroke?
 ```{r sysBP_diaBP_age_stroke_1, include=TRUE, echo=TRUE}
+
 ggplot(dat_1, aes(x = sysBP, y = diaBP, color = age)) +
   geom_point() +
   labs(
@@ -491,6 +542,7 @@ ggplot(dat_1, aes(x = sysBP, y = diaBP, color = age)) +
     color = "Age"
   ) +
   scale_color_gradient(low = "blue", high = "red")
+
 ```
 
 This scatter plot depicts the relationship between Systolic Blood pressure and Diastolic Blood pressure in stroke patients. 
@@ -668,7 +720,7 @@ test_preds <- predict(log_corr_model,
                       newdata = test_data, 
                       type = "response")
 
-# Calculate the accuracy of the model
+
 test_preds_acc <- ifelse(test_preds > 0.5, 1, 0)
 
 ```
@@ -687,14 +739,15 @@ In general, VIF values above 5 or 10 indicate a problematic level of multicollin
 In the output you provided, each variable has a VIF value less than 5, indicating that there is no problematic multicollinearity in the model. Specifically, the diaBP variable has a VIF of 2.39, the sysBP variable has a VIF of 2.41, the age variable has a VIF of 1.12, and the BMI variable has a VIF of 1.15. Therefore, the model is not suffering from high multicollinearity among the predictors.
 
 
-```{r logit_corr_model_conf_metrics, echo = TRUE}
+```{r logit_corr_model_confusion_matrix, echo = TRUE}
 
 # create confusion matrix
-confusion_mat <- confusionMatrix(factor(test_preds_acc, levels = c(0, 1)), 
-                               factor(test_data$stroke, levels = c(0, 1)))
+Prediction <- factor(test_preds_acc, levels = c(0, 1))
+Actual <- factor(test_data$stroke, levels = c(0, 1))
+full_model_confusion_mat <- confusionMatrix(Prediction, Actual)
 
 # print the confusion matrix
-confusion_mat$table
+full_model_confusion_mat$table
 
 ```
 
@@ -706,26 +759,32 @@ False positives: 190 observations were incorrectly classified as class 1 when th
 False negatives: 3 observations were incorrectly classified as class 0 when they were actually class 1.
 
 
+### Logistic regression model evaluation metrics with highly correlated variables 
 ```{r logit_corr_model_evaluation_metrics, echo = TRUE}
 
 # print accuracy
 accuracy <- confusion_mat$overall['Accuracy']
 print(paste("Accuracy: ", round(accuracy, 4) * 100, "%"))
 
+
 # print precision
 precision <- confusion_mat$byClass['Pos Pred Value']
 print(paste("Precision: ", round(precision, 4) * 100, "%"))
+
 
 # print recall (sensitivity)
 sensitivity <- confusion_mat$byClass['Sensitivity']
 print(paste("Recall (Sensitivity): ", round(sensitivity, 4) * 100, "%"))
 
+
 # print specificity
 specificity <- confusion_mat$byClass['Specificity']
 print(paste("Specificity: ", round(specificity, 4) * 100, "%"))
 
+
 # print F1 score
 f1_score <- 2 * (confusion_mat$byClass['Pos Pred Value'] * confusion_mat$byClass['Sensitivity']) / (confusion_mat$byClass['Pos Pred Value'] + confusion_mat$byClass['Sensitivity'])
+
 
 print(paste("F1 Score: ", round(f1_score, 4) * 100, "%"))
 
@@ -751,6 +810,7 @@ F1 Score: The harmonic mean of precision and recall, which gives equal weight to
 Overall, the model has high accuracy, precision, and recall, but low specificity. 
 This means that it performs well in identifying positive cases, but has a high rate of false positives, which could lead to misclassification of negative cases as positive.
 
+
 ### Model building 2: Using all predictor variables
 ```{r logit_full_model, echo = TRUE}
 
@@ -767,11 +827,10 @@ test_full_preds <- predict(log_full_model,
                       newdata = test_data, 
                       type = "response")
 
-# Calculate the accuracy of the model
+
 test_full_preds_acc <- ifelse(test_full_preds > 0.5, 1, 0)
 
 ```
-
 
 ```{r vif_log_full_model, echo=TRUE}
 
@@ -780,7 +839,7 @@ vif(log_full_model)
 ```
 
 
-```{r logit_full_model_conf_metrics, echo = TRUE}
+```{r logit_full_model_confusion_matrix, echo = TRUE}
 
 # create confusion matrix
 confusion_mat_full <- confusionMatrix(factor(test_full_preds_acc, levels = c(0, 1)), 
@@ -792,50 +851,130 @@ confusion_mat_full$table
 ```
 
 
+
 ```{r logit_full_model_evaluation_metrics, echo = TRUE}
 
 # print accuracy
 full_model_accuracy <- confusion_mat_full$overall['Accuracy']
 print(paste("Accuracy: ", round(full_model_accuracy, 4) * 100, "%"))
 
+
 # print precision
 full_model_precision <- confusion_mat_full$byClass['Pos Pred Value']
 print(paste("Precision: ", round(full_model_precision, 4) * 100, "%"))
+
 
 # print recall (sensitivity)
 full_model_sensitivity <- confusion_mat_full$byClass['Sensitivity']
 print(paste("Recall (Sensitivity): ", round(full_model_sensitivity, 4) * 100, "%"))
 
+
 # print specificity
 full_model_specificity <- confusion_mat_full$byClass['Specificity']
 print(paste("Specificity: ", round(full_model_specificity, 4) * 100, "%"))
 
+
 # print F1 score
 full_model_f1_score <- 2 * (confusion_mat_full$byClass['Pos Pred Value'] * confusion_mat_full$byClass['Sensitivity']) / (confusion_mat_full$byClass['Pos Pred Value'] + confusion_mat_full$byClass['Sensitivity'])
+
 
 print(paste("F1 Score: ", round(full_model_f1_score, 4) * 100, "%"))
 
 ```
 
+```{r full_model_with_feature_importance, echo = TRUE}
+
+full_model_step <- step(log_full_model, direction = "backward", trace = 0)
+summary(full_model_step)
+
+# Make predictions on the testing data
+predictions_step <- predict(full_model_step, 
+                      newdata = test_data, 
+                      type = "response")
+
+
+predictions_step_acc <- ifelse(predictions_step > 0.5, 1, 0)
+
+```
+
+This output shows the result of a logistic regression model where the dependent variable is "stroke" and the independent variables are "gender", "age", "cigsPerDay", "prevalentStroke", "prevalentHyp", "sysBP", and "glucose". The output shows the estimates of the regression coefficients, their standard errors, z-values, and p-values. The intercept term is significantly different from zero, as indicated by the p-value of less than 2e-16. The other variables are also significant predictors of the occurrence of a stroke, as their p-values are less than 0.05. The deviance residuals are also shown, which indicate the goodness-of-fit of the model. The null deviance and residual deviance values show that the model has explained a significant amount of the variation in the data. The AIC value is also shown, which is a measure of the model's goodness-of-fit, where a lower value indicates a better fit.
+
+
+```{r full_model_step_evaluation, echo=TRUE}
+
+# create confusion matrix
+confusion_mat_full_step <- confusionMatrix(factor(predictions_step_acc, levels = c(0, 1)), 
+                               factor(test_data$stroke, levels = c(0, 1)))
+
+# print the confusion matrix
+confusion_mat_full_step$table
+
+
+# print accuracy
+full_model_step_accuracy <- confusion_mat_full_step$overall['Accuracy']
+print(paste("Accuracy: ", round(full_model_step_accuracy, 4) * 100, "%"))
+
+
+# print precision
+full_model_step_precision <- confusion_mat_full_step$byClass['Pos Pred Value']
+print(paste("Precision: ", round(full_model_step_precision, 4) * 100, "%"))
+
+
+# print recall (sensitivity)
+full_model_step_sensitivity <- confusion_mat_full_step$byClass['Sensitivity']
+print(paste("Recall (Sensitivity): ", round(full_model_step_sensitivity, 4) * 100, "%"))
+
+
+# print specificity
+full_model_step_specificity <- confusion_mat_full_step$byClass['Specificity']
+print(paste("Specificity: ", round(full_model_step_specificity, 4) * 100, "%"))
+
+
+# print F1 score
+full_model_step_f1_score <- 2 * (confusion_mat_full_step$byClass['Pos Pred Value'] * confusion_mat_full_step$byClass['Sensitivity']) / (confusion_mat_full_step$byClass['Pos Pred Value'] + confusion_mat_full_step$byClass['Sensitivity'])
+
+
+print(paste("F1 Score: ", round(full_model_step_f1_score, 4) * 100, "%"))
+
+```
+
+
 
 ## ??? Pending interpretation
+
 ## ROC/AUC curve
-```{r}
-# predicted data
+
+
+```{r full_model_ROC_curve, echo =TRUE}
 
 library(pROC)
  
-# create roc curve
-roc_object <- roc( test_data$stroke, test_preds)
+# create ROC curve
+roc_object <- roc(test_data$stroke, test_preds)
  
 # calculate area under curve
 auc(roc_object)
 
 # plot the ROC curve
-plot(roc_object, main="ROC Curve", print.auc=TRUE, legacy.axes=TRUE)
+plot(roc_object, main = "ROC Curve", 
+     print.auc = TRUE, legacy.axes = TRUE)
 
 ```
+
+
+
+
+
+
 ```{r}
+
+predicted <- test_full_preds_acc
+
+# Calculate the confusion matrix
+Actual <- test_data$stroke
+confusion_matrix <- table(predicted, Actual)
+
+confusion_matrix
 
 ```
 
