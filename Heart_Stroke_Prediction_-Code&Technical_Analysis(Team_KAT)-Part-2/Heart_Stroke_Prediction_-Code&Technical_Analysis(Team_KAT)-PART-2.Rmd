@@ -646,6 +646,70 @@ Before applying SMOTE, there were 2516 observations with stroke=0 and 451 observ
 
 The total number of observations in the balanced training data is 3157, which is higher than the original training data because SMOTE creates synthetic data points to balance the classes.
 
+## Distribution of the target variable (stroke)
+```{r target_var, include=TRUE, echo=TRUE}
+ggplot(train_data_balanced, aes(x = stroke)) +
+  geom_bar(aes(fill = ..count..)) +
+  scale_fill_gradient("Count", low = "#F0E442", high = "#999999") +
+  labs(x = "stroke", y = "Count of People", title = "Distribution of Target variable (stroke)")
+```
+
+```{r}
+# fit the random forest model
+library(randomForest)
+
+rf_model <- randomForest(stroke ~ ., data = train_data_balanced, importance = TRUE)
+
+# make predictions on test data
+test_preds_rf <- predict(rf_model, newdata = test_data)
+
+# calculate accuracy
+rf_model_accuracy <- sum(test_preds_rf == test_data$stroke) / nrow(test_data)
+print(paste("Accuracy: ", round(rf_model_accuracy, 4) * 100, "%"))
+
+# calculate feature importance
+rf_importance <- importance(rf_model)
+print(rf_importance)
+
+# plot feature importance
+varImpPlot(rf_model, type = 2, main = "Random Forest Feature Importance")
+
+```
+
+```{r}
+library(rpart)
+
+# Fit decision tree model
+tree_model <- rpart(stroke ~ ., data=train_data_balanced, method="class")
+
+# Make predictions on the test data
+test_preds <- predict(tree_model, test_data, type="class")
+
+# print confusion matrix
+confusion_mat <- confusionMatrix(factor(test_preds, levels = c(0, 1)), 
+                                 factor(test_data$stroke, levels = c(0, 1)))
+confusion_mat$table
+
+# calculate model performance metrics
+accuracy <- confusion_mat$overall['Accuracy']
+precision <- confusion_mat$byClass['Pos Pred Value']
+sensitivity <- confusion_mat$byClass['Sensitivity']
+specificity <- confusion_mat$byClass['Specificity']
+f1_score <- 2 * (precision * sensitivity) / (precision + sensitivity)
+
+# print performance metrics
+print(paste("Accuracy: ", round(accuracy, 4) * 100, "%"))
+print(paste("Precision: ", round(precision, 4) * 100, "%"))
+print(paste("Recall (Sensitivity): ", round(sensitivity, 4) * 100, "%"))
+print(paste("Specificity: ", round(specificity, 4) * 100, "%"))
+print(paste("F1 Score: ", round(f1_score, 4) * 100, "%"))
+
+# Plot decision tree
+plot(tree_model)
+text(tree_model)
+```
+
+
 ```{r test_data_SMOTE, echo=TRUE}
 
 # Count the number of observations in each class before SMOTE
