@@ -222,6 +222,25 @@ stroke_df$age <- log(stroke_df$age)
 shapiro.test(stroke_df$age)
 
 ```
+```{r}
+install.packages("reshape2")
+library(reshape2)
+ 
+# creating correlation matrix
+corr_mat <- round(cor(stroke_df[, sapply(stroke_df, is.numeric)]),2)
+ 
+# reduce the size of correlation matrix
+melted_corr_mat <- melt(corr_mat)
+head(melted_corr_mat)
+ 
+# plotting the correlation heatmap
+library(ggplot2)
+ggplot(data = melted_corr_mat, aes(x=Var1, y=Var2,
+                                   fill=value)) +
+geom_tile() +
+geom_text(aes(Var2, Var1, label = value),
+          color = "black",size=4)
+```
 
 
 
