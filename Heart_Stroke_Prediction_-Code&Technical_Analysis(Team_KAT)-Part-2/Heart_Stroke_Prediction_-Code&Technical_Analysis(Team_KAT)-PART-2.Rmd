@@ -75,9 +75,9 @@ stroke_df <- read.csv(url(github_file_path))
 
 ## Sample record elements of stroke dataframe
 
-head(stroke_df, n = 2)
+
 ```{r head_2_csv, include=TRUE, echo=TRUE}
-head(stroke_df, n = 2)
+head(stroke_df, n = 5)
 ```
 
 # Summary of the dataset
@@ -217,18 +217,7 @@ dat$age.cat <-
 dat_1 <- subset(dat, stroke == 1)
 ```
 
-```{r}
-# Shapiro test to check data distribution
-shapiro.test(stroke_df$age)
-```
 
-```{r}
-# Age variable transformation
-# stroke_df$age <- log(stroke_df$age)
-
-shapiro.test(stroke_df$age)
-
-```
 ```{r}
 install.packages("reshape2")
 library(reshape2)
