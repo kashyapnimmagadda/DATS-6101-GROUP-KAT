@@ -1,5 +1,5 @@
 ---
-title: "Heart Stroke Prediction - Code & Technical Analysis"
+title: "Heart Stroke Prediction - Code & Technical Analysis, Part - 2"
 author: "Team KAT"
 date: "`r Sys.Date()`"
 output:
@@ -82,6 +82,7 @@ head(stroke_df, n = 2)
 
 # Summary of the dataset
 ```{r data_cleaning, include=TRUE, echo=TRUE}
+
 names(stroke_df)[names(stroke_df) == "TenYearCHD"] <- "stroke"
 colnames(stroke_df)[1] <- "gender"
 
@@ -100,6 +101,7 @@ stroke_df$BMI <- as.numeric(stroke_df$BMI)
 
 # To get the summary statistics of the dataset
 summary(stroke_df)
+
 ```
 
 # Data Cleaning - Checking for null values
@@ -629,7 +631,7 @@ summary(stroke_df)
 
 ```
 
-Since the classes are not balanced (0=3594, 1=644), I will use SMOTE to balance them since if we treat them as they are, our model will predict on the class that is in the majority, which will be biased.
+Since the classes are not balanced (0=3594, 1=644), I will use SMOTE to balance the train data since if we treat them as they are, our model will predict on the class that is in the majority, which will be biased.
 
 
 ```{r train_data_SMOTE, echo=TRUE}
@@ -662,14 +664,14 @@ ggplot(train_data_balanced, aes(x = stroke)) +
   labs(x = "stroke", y = "Count of People", title = "Distribution of Target variable (stroke) in Train data")
 
 ```
-
+## Model Building with Balanced data
 ### Model Building - 1: Decision Tree
 
-```{r decision_tree_model, echo = TRUE}
+```{r decision_tree_model_bal, echo = TRUE}
 library(rpart)
 
 # Fit decision tree model
-tree_model <- rpart(stroke ~ ., 
+tree_model_bal <- rpart(stroke ~ ., 
                     data = train_data_balanced, 
                     method="class")
 
@@ -722,6 +724,18 @@ plot(ROC_dt,
 
 ```
 
+The model is based on a dataset with 3698 instances, where each instance has a set of attributes and a binary class label (0 or 1).
+
+The root node is the starting point of the tree, and it includes all 3698 instances. The root node split the data based on the "age" attribute. If the age is less than 47.02149, the data goes to node 2; otherwise, it goes to node 3.
+
+Node 2 includes 1165 instances with the age less than 47.02149, and it further splits the data based on the "diabetes" attribute. If the diabetes is 0, the instance belongs to node 4, which includes 1124 instances with 0 class labels, and it is marked as a terminal node with a "*." If the diabetes is 1, the instance belongs to node 5, which includes 41 instances with 1 class label, and it is also marked as a terminal node.
+
+Node 3 includes 2533 instances with the age greater than or equal to 47.02149, and it further splits the data based on the "cigsPerDay" attribute. If the cigsPerDay is less than 0.01949676, the instance belongs to node 6, which includes 853 instances with 0 class labels and marked as a terminal node. If the cigsPerDay is greater than or equal to 0.01949676, the instance belongs to node 7, which includes 1680 instances with 1 class labels.
+
+Node 7 further splits the data based on the "cigsPerDay" attribute. If the cigsPerDay is greater than or equal to 19.96676, the instance belongs to node 14, which includes 377 instances with 0 class labels and marked as a terminal node. Otherwise, the instance belongs to node 15, which includes 1303 instances with 1 class labels and marked as a terminal node.
+
+The output also provides some statistics for each node, including the number of instances (n), the number of instances with the class label 0 (loss), the predicted class label (yval), and the probability of each class (yprob).
+
 
 ```{r decision_tree_model, echo = TRUE}
 
@@ -735,7 +749,7 @@ rpart.plot(fit, extra = 106)
 ```
 
 
-```{r test_data_SMOTE, echo=TRUE}
+```{r test_data, echo=TRUE}
 
 # Count the number of observations in each class before SMOTE
 table(test_data$stroke)
@@ -751,16 +765,16 @@ test_data_balanced <- test_data
 # # Count the number of observations in each class after SMOTE
 # table(test_data_balanced$stroke)
 # 
-# nrow(test_data_balanced)
+nrow(test_data_balanced)
 
 ```
 
-After applying SMOTE to balance the classes in the test data, the resulting number of observations in each class is 752 and 772 for stroke = 0 and stroke = 1 respectively. There are a total of 1524 observations in the test data after SMOTE.
+After applying SMOTE to balance the classes in the test data, the resulting number of observations in each class is 1078 and 193 for stroke = 0 and stroke = 1 respectively. There are a total of 1271 observations in the test data.
 
 
 ### Tuned Decision Tree
 
-```{r}
+```{r tuned_decision_tree, echo = TRUE}
 
 control <- rpart.control(minsplit = 7,
                           minbucket = round(5 / 3),
@@ -772,8 +786,8 @@ tune_fit <- rpart(stroke ~ .,
                   method = 'class', control = control)
 rpart.plot(tune_fit, extra = 106)
 
-# Prediction
 
+# Prediction
 predict_unseen1 <-predict(tune_fit, 
                           test_data, 
                           type = 'class')
@@ -792,8 +806,9 @@ prob = predict(tune_fit,
                type="prob")
 
 ROC_dt_tune <- roc(test_data$stroke, prob[,2])
+auc(ROC_dt_tune)
 plot(ROC_dt_tune)
-paste("Area under curve of Tuned Decision Tree: ", auc(ROC_rf))
+paste("Area under curve of Tuned Decision Tree: ", auc(ROC_dt_tune))
 
 ```
 
@@ -806,20 +821,31 @@ control <- rpart.control(minsplit = 7,
     maxdepth = 4,
     cp = 0)
 
-tune_fit <- rpart(stroke~., data = trainrose1 , method = 'class', control = control)
-rpart.plot(tune_fit, extra = 106)
+tune_fit <- rpart(stroke ~ .,
+                  data = train_data_balanced, 
+                  method = 'class', 
+                  control = control)
+
+rpart.plot(tune_fit, 
+           extra = 106)
 
 # prediction
-predict_unseen1 <-predict(tune_fit, test1_fe[-7], type = 'class')
+predict_unseen1 <-predict(tune_fit, test_data, type = 'class')
 
 # Evaluation Metric
-confusion1= confusionMatrix(predict_unseen,test1_fe$stroke,mode= "everything")
+confusion1= confusionMatrix(predict_unseen1,
+                            test_data$stroke,
+                            mode= "everything")
+
 confusion1
 
 # AUC-ROC curve
 
-prob=predict(tune_fit,test1_fe[-7],type="prob")
-ROC_rf <- roc(test1_fe$stroke, prob[,2])
+prob <- predict(tune_fit, 
+                test_data, 
+                type="prob")
+
+ROC_rf <- roc(test_data$stroke, prob[,2])
 plot(ROC_rf)
 paste("Area under curve of random forest: ", auc(ROC_rf))
 
@@ -904,8 +930,6 @@ full_model_f1_score <- 2 * (confusion_mat_rf$byClass['Pos Pred Value'] * confusi
 print(paste("F1 Score: ", round(full_model_f1_score, 4) * 100, "%"))
 
 ```
-
-
 
 
 ### Model building 3: Logistic Regression with Randform forest feature selection
@@ -1031,12 +1055,14 @@ This means that it performs well in identifying positive cases, but has a high r
 
 ### Model building 2: Using step() for all variables
 ```{r logit_full_model, echo = TRUE}
+
 # Fit a logistic regression full model to the training data
 log_full_model <- glm(stroke ~ ., 
                  family = binomial, 
                  data = train_data_balanced)
 
 print(summary(log_full_model))
+
 ```
 
 
@@ -1087,6 +1113,7 @@ confusion_mat_full <- confusionMatrix(factor(test_full_preds_acc, levels = c(0, 
 
 # print the confusion matrix
 confusion_mat_full$table
+
 
 # print accuracy
 full_model_accuracy <- confusion_mat_full$overall['Accuracy']
@@ -1153,7 +1180,8 @@ The AUC (Area Under the Curve) of the ROC (Receiver Operating Characteristic) cu
 #### -------------------------------------------------------------
 
 
-### Model building With original dataset
+## Model building With original dataset
+### Model - 1: Decision Tree
 
 ```{r org_decision_tree, echo=TRUE}
 
@@ -1212,7 +1240,7 @@ plot(ROC_dt_org,
 
 ```
 
-### Tuned Decision Tree
+## Tuned Decision Tree
 
 ```{r tuned_DT, echo=TRUE}
 
@@ -1299,13 +1327,13 @@ auc_val_tuned_dt_org <- auc(ROC_dt_tuned_org)
 # plot the ROC curve
 plot(ROC_dt_tuned_org, main = "ROC Curve for Tuned Decision Tree")
 
-text(x = 0.7, y = 0.2, labels = paste("AUC = ", round(auc_val_tuned_dt_org, 3)), col = "red", cex = 1.5, font = 2)
+text(x = 0.7, y = 0.2, labels = paste("AUC = ", round(auc_val_tuned_dt_org, 3)), col = "orange", cex = 1.5, font = 2)
 
 paste("Area under curve of Tuned Decision Tree: ", auc_val_tuned_dt_org)
 
 ```
 
-### Model building - 2: Random Forest for original dataset
+### Model building - 3: Random Forest for original dataset
 ```{r rf_model_org, echo=TRUE}
 
 # fit the random forest model
@@ -1610,7 +1638,7 @@ F1 Score: the harmonic mean of precision and recall. The F1 score of the full mo
 
 ```{r glm_full_model_ROC_curve, echo = TRUE}
 
-prob_log_step_glm <- predict(glm_full_model, 
+prob_log_step_glm <- predict(glm_full_step_model, 
                 test_data,
                 type = "response")
 
