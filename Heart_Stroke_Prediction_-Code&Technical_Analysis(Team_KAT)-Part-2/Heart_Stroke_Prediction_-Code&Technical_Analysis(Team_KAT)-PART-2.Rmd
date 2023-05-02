@@ -222,16 +222,11 @@ dat$age.cat <-
 dat_1 <- subset(dat, stroke == 1)
 ```
 
-<<<<<<< Updated upstream
 
-```{r}
-install.packages("reshape2")
-=======
 # Correlation matrix for numeric variables
 
 ```{r correlation_matrix, echo = TRUE}
 
->>>>>>> Stashed changes
 library(reshape2)
  
 # creating correlation matrix
@@ -748,18 +743,18 @@ The output also provides some statistics for each node, including the number of 
 # Count the number of observations in each class before SMOTE
 table(test_data$stroke)
 
-test_data_balanced <- test_data
+test_data <- test_data
 
 # # Apply SMOTE to balance the classes
-# test_data_balanced <- SMOTE(stroke ~ .,
+# test_data <- SMOTE(stroke ~ .,
 #                              test_data,
 #                              perc.over = 300,
 #                              perc.under = 130)
 # 
 # # Count the number of observations in each class after SMOTE
-# table(test_data_balanced$stroke)
+# table(test_data$stroke)
 # 
-print(paste("Number of observations in test data split: ", nrow(test_data_balanced)))
+print(paste("Number of observations in test data split: ", nrow(test_data)))
 
 ```
 
@@ -809,45 +804,6 @@ plot(ROC_dt_tune,
      print.auc.y = 0.2)
 
 ```
-
-<!-- #### Tuned Decision Tree with Feature Selection  -->
-
-<!-- ```{r decision_tree_tuned_feat, echo = TRUE} -->
-
-<!-- control <- rpart.control(minsplit = 7, -->
-<!--     minbucket = round(5 / 3), -->
-<!--     maxdepth = 4, -->
-<!--     cp = 0) -->
-
-<!-- tune_fit <- rpart(stroke ~ ., -->
-<!--                   data = train_data_balanced,  -->
-<!--                   method = 'class',  -->
-<!--                   control = control) -->
-
-<!-- rpart.plot(tune_fit,  -->
-<!--            extra = 106) -->
-
-<!-- # prediction -->
-<!-- predict_unseen1 <-predict(tune_fit, test_data, type = 'class') -->
-
-<!-- # Evaluation Metric -->
-<!-- confusion1= confusionMatrix(predict_unseen1, -->
-<!--                             test_data$stroke, -->
-<!--                             mode= "everything") -->
-
-<!-- confusion1 -->
-
-<!-- # AUC-ROC curve -->
-
-<!-- prob <- predict(tune_fit,  -->
-<!--                 test_data,  -->
-<!--                 type="prob") -->
-
-<!-- ROC_rf <- roc(test_data$stroke, prob[,2]) -->
-<!-- plot(ROC_rf) -->
-<!-- paste("Area under curve of random forest: ", auc(ROC_rf)) -->
-
-<!-- ``` -->
 
 
 ### Model building - 2: Random Forest
@@ -951,7 +907,7 @@ glm_test_preds_acc <- ifelse(glm_test_preds > 0.5, 1, 0)
 
 The summary of the logistic regression model fitted on the training data shows the following:
 
-The coefficients table shows the estimated effect of each predictor on the log odds of having a stroke. For example, for every one-unit increase in "sysBP", the log odds of having a stroke increase by 0.0157. The intercept represents the log odds of having a stroke when all the predictors are equal to zero.
+The coefficients table shows the estimated effect of each predictor on the log odds of having a stroke. For example, for every one-unit increase in "sysBP", the log odds of having a stroke increase by 0.0125. The intercept represents the log odds of having a stroke when all the predictors are equal to zero.
 
 The "Pr(>|z|)" column in the coefficients table shows the p-values for testing the null hypothesis that the true value of the coefficient is zero. For example, the coefficient for "totChol" is statistically significant at the 0.05 level, meaning that there is evidence to suggest that it has a non-zero effect on the log odds of having a stroke.
 
@@ -981,7 +937,7 @@ In this case, all VIF values are less than 5, which indicates that there is not 
 # create confusion matrix
 glm_model_confusion_mat <- confusionMatrix(factor(glm_test_preds_acc, 
                                         levels = c(0, 1)), 
-                               factor(test_data_balanced$stroke, 
+                               factor(test_data$stroke, 
                                       levels = c(0, 1)))
 
 # print the confusion matrix
@@ -1031,7 +987,6 @@ The F1 score is the harmonic mean of precision and recall and is calculated as 2
 
 
 
-
 ```{r glm_model_bal_feat_AUC_curve, echo = TRUE}
 
 prob_glm_ft <- predict(glm_model_bal_feat, 
@@ -1069,7 +1024,6 @@ print(summary(glm_full_model))
 # Perform stepwise regression using the "step" function
 glm_full_step_model <- step(glm_full_model)
 
-print(summary(glm_full_step_model))
 
 # Make predictions on the testing data
 test_preds_glm <- predict(glm_full_step_model, 
@@ -1172,5 +1126,465 @@ plot(ROC_log_step,
 ## AUC-ROC Curve interpretation for logistic regression with step model
 
 An AUC of 0.5 indicates that the model is no better than random guessing, while an AUC of 1.0 indicates perfect predictive power.
-The AUC (Area Under the Curve) of the ROC (Receiver Operating Characteristic) curve is 0.7119, indicating that the model has a moderate ability to distinguish between stroke and non-stroke cases.
+The AUC (Area Under the Curve) of the ROC (Receiver Operating Characteristic) curve is 0.725, indicating that the model has a moderate ability to distinguish between stroke and non-stroke cases.
 
+#### -------------------------------------------------------------
+
+
+## Model building With original dataset
+### Model - 1: Decision Tree
+
+```{r org_decision_tree, echo=TRUE}
+
+# Fit decision tree model
+tree_model_org <- rpart(stroke ~ ., 
+                    data = train_data, 
+                    method="class")
+
+
+# Make predictions on the test data
+test_preds_org <- predict(tree_model_org, 
+                      test_data, 
+                      type="class")
+
+
+# print confusion matrix
+confusion_mat_org <- confusionMatrix(factor(test_preds_org, levels = c(0, 1)), 
+                                 factor(test_data$stroke, levels = c(0, 1)), 
+                                 mode = 'everything')
+
+confusion_mat_org$table
+
+# calculate model performance metrics
+accuracy <- confusion_mat_org$overall['Accuracy']
+precision <- confusion_mat_org$byClass['Pos Pred Value']
+sensitivity <- confusion_mat_org$byClass['Sensitivity']
+specificity <- confusion_mat_org$byClass['Specificity']
+
+f1_score <- 2 * (precision * sensitivity) / (precision + sensitivity)
+
+# print performance metrics
+print(paste("Accuracy: ", round(accuracy, 4) * 100, "%"))
+print(paste("Precision: ", round(precision, 4) * 100, "%"))
+print(paste("Recall (Sensitivity): ", round(sensitivity, 4) * 100, "%"))
+print(paste("Specificity: ", round(specificity, 4) * 100, "%"))
+print(paste("F1 Score: ", round(f1_score, 4) * 100, "%"))
+
+
+# AUC-ROC curve
+
+prob_dt_org <- predict(tree_model_org, 
+                test_data,
+                type = "prob")
+
+ROC_dt_org <- roc(test_data$stroke, prob_dt_org[,2])
+auc_val_dt_org <- auc(ROC_dt_org)
+
+plot(ROC_dt_org, 
+     print.auc = TRUE, 
+     print.auc.x = 0.5, 
+     print.auc.y = 0.2)
+
+
+```
+
+Based on the confusion matrix and performance metrics, it appears that the decision tree model has classified all positive cases correctly but has incorrectly classified a significant number of negative cases. The model has achieved a high accuracy of 84.82%, but this is mainly due to the class imbalance in the data, where there are many more negative cases than positive cases.
+
+The precision and recall metrics are also quite high, with a precision of 84.82% and recall (sensitivity) of 100%. However, the specificity is very low at 0%, indicating that the model is not very good at identifying negative cases. The F1 score, which is the harmonic mean of precision and recall, is also quite high at 91.78%.
+
+The AUC-ROC curve shows that the model is not able to differentiate well between positive and negative cases, with an AUC value of 0.5 However, this may be due to the class imbalance in the data, and it is important to consider other performance metrics as well.
+
+
+## Tuned Decision Tree
+
+```{r tuned_DT, echo=TRUE}
+
+control_org <- rpart.control(minsplit = 7,
+                          minbucket = round(5 / 3),
+                          maxdepth = 4,
+                          cp = 0)
+
+tune_fit_org <- rpart(stroke ~ ., 
+                  data = train_data, 
+                  method = 'class', 
+                  control = control_org)
+
+rpart.plot(tune_fit_org, 
+           extra = 106)
+
+
+# Prediction
+predict_unseen_org <-predict(tune_fit_org, 
+                          test_data, 
+                          type = 'class')
+
+# Eval Metric
+confusion1_org = confusionMatrix(predict_unseen1,
+                            test_data$stroke,
+                            mode= "everything")
+
+confusion1_org
+
+
+# calculate the ROC curve
+prob_org = predict(tune_fit_org, 
+                   test_data,
+                   type="prob")
+ROC_dt_tune_org <- roc(test_data$stroke, 
+                       prob_org[,2])
+auc_val_rf_dt_org <- auc(ROC_dt_tune_org)
+
+# plot the ROC curve
+plot(ROC_dt_tune_org, main = "ROC Curve for Tuned Decision Tree")
+text(x = 0.7, y = 0.2, labels = paste("AUC = ", round(auc_val_rf_dt_org, 3)), col = "red", cex = 1.5, font = 2)
+
+paste("Area under curve of Tuned Decision Tree: ", auc_val_rf_dt_org)
+
+```
+
+After tuning the decision tree model, we obtained an accuracy of 77.18%, which is lower than the accuracy of the original decision tree model (84.82%). The precision value of the tuned decision tree model is also 86.55%, which is the same as the original model. However, the sensitivity and specificity values are 86.55% and 24.87%, respectively, which are lower than the corresponding values of the original model (100% and 0%). The F1 score is also 86.55%, the same as the precision and recall values.
+
+The confusion matrix shows that the tuned decision tree model misclassified more stroke patients than the original model. The tuned model predicted 193 false negatives (patients who have had a stroke but were predicted as not having a stroke) compared to the original model's zero false negatives. Additionally, the tuned model predicted 145 false positives (patients who have not had a stroke but were predicted as having a stroke) compared to the original model's zero false positives.
+
+The ROC curve of the tuned decision tree model has an AUC value of 0.67, which is lower than the AUC value of the original model (0.81). This indicates that the tuned model is less effective in distinguishing between stroke and non-stroke patients than the original model.
+
+## Comparison of decision tree models
+
+In the first decision tree model, we have used the default rpart function to fit the decision tree on the stroke dataset. The accuracy of the model was found to be 0.7747.
+
+On the other hand, in the second decision tree model, we have tuned the parameters using the rpart.control function and then fit the decision tree on the stroke dataset. The accuracy of this model was found to be 0.8442. This indicates that the tuned decision tree model is performing better than the default decision tree model.
+
+The confusion matrix shows that the tuned decision tree model has 1071 true negatives, 191 false positives, 7 false negatives, and 2 true positives. The specificity of the model is 0.01036, and the sensitivity of the model is 0.99351. The precision of the model is 0.84865, and the recall of the model is 0.99351. The F1 score of the model is 0.91538.
+
+The ROC curve of the tuned decision tree model has an AUC value of 0.672498.
+
+### Model building - 3: Random Forest for original dataset
+```{r rf_model_org, echo=TRUE}
+
+# fit the random forest model
+library(randomForest)
+
+rf_model_org <- randomForest(stroke ~ .,
+                         data = train_data,
+                         importance = TRUE)
+
+# make predictions on test data
+test_preds_rf_org <- predict(rf_model_org, 
+                         newdata = test_data)
+
+# calculate accuracy
+rf_model_accuracy_org <- sum(test_preds_rf_org == test_data$stroke) / nrow(test_data)
+print(paste("Accuracy: ", round(rf_model_accuracy_org, 4) * 100, "%"))
+
+# calculate feature importance
+rf_importance_org <- importance(rf_model_org)
+print(rf_importance_org)
+
+# plot feature importance
+varImpPlot(rf_model_org, 
+           type = 2, 
+           main = "Random Forest Feature Importance")
+
+rf_importance_org <- as.data.frame(rf_importance_org)
+
+rf_importance_org <- rf_importance_org[order(rf_importance_org$MeanDecreaseGini, decreasing = TRUE),]
+
+
+# AUC-ROC curve for RF model
+
+prob_rf_org <- predict(rf_model_org, 
+                test_data,
+                type = "prob")
+
+ROC_rf_org <- roc(test_data$stroke, prob_rf_org[,2])
+auc_val_rf_org <- auc(ROC_rf_org)
+
+plot(ROC_rf_org, 
+     print.auc = TRUE, 
+     print.auc.x = 0.5, 
+     print.auc.y = 0.2)
+
+# paste("Area under curve of Decision Tree: ", auc(ROC_rf))
+
+```
+
+The Random Forest model has an accuracy of 85.02%, which is slightly better than the Decision Tree model. The feature importance plot shows that the most important features are sysBP, age, totChol, and diaBP. These features are also in the top five features for importance in the Decision Tree model.
+
+The AUC-ROC curve for the Random Forest model has an area under the curve (AUC) of 0.685, which is slightly better than the AUC of the Decision Tree model. This suggests that the Random Forest model may be a better overall model for predicting stroke risk in this dataset.
+
+### Random forest model evaluation metrics
+```{r rf_model_org_evaluation_metrics, echo=TRUE}
+
+# create confusion matrix
+confusion_mat_rf_org <- confusionMatrix(data = test_preds_rf_org, 
+                                      reference = test_data$stroke)
+
+# print accuracy
+full_model_accuracy_org <- confusion_mat_rf_org$overall['Accuracy']
+print(paste("Accuracy: ", round(full_model_accuracy_org, 4) * 100, "%"))
+
+
+# print precision
+full_model_precision_org <- confusion_mat_rf_org$byClass['Pos Pred Value']
+print(paste("Precision: ", round(full_model_precision_org, 4) * 100, "%"))
+
+# print recall (sensitivity)
+full_model_sensitivity_org <- confusion_mat_rf_org$byClass['Sensitivity']
+print(paste("Recall (Sensitivity): ", round(full_model_sensitivity_org, 4) * 100, "%"))
+
+# print specificity
+full_model_specificity_org <- confusion_mat_rf_org$byClass['Specificity']
+print(paste("Specificity: ", round(full_model_specificity_org, 4) * 100, "%"))
+
+# print F1 score
+full_model_f1_score_org <- 2 * (confusion_mat_rf_org$byClass['Pos Pred Value'] * confusion_mat_rf_org$byClass['Sensitivity']) / (confusion_mat_rf_org$byClass['Pos Pred Value'] + confusion_mat_rf_org$byClass['Sensitivity'])
+
+print(paste("F1 Score: ", round(full_model_f1_score_org, 4) * 100, "%"))
+
+```
+
+The model has an overall accuracy of 85.05%, which means that 85.05% of the predictions made by the model were correct. The precision of the model is 85.46%, which means that when the model predicts that a person is at risk of stroke, it is correct 85.46% of the time. The recall (sensitivity) of the model is 99.26%, which means that the model correctly identifies 99.26% of people who are actually at risk of stroke. The specificity of the model is 5.7%, which means that the model correctly identifies only 5.7% of people who are not at risk of stroke. The F1 score of the model is 91.85%, which is a weighted average of precision and recall and is often used as a more balanced measure of model performance.
+
+### Model building 3: Logistic Regression with Randform forest feature selection.
+```{r glm_model_org, echo = TRUE}
+
+# Fit a logistic regression model to the training data
+glm_model_org <- glm(stroke ~ diaBP + sysBP + age + glucose + BMI + totChol +
+                               cigsPerDay + heartRate + prevalentHyp + currentSmoker, 
+                 family = binomial, 
+                 data = train_data)
+
+
+print(summary(glm_model_org))
+
+# Make predictions on the testing data
+glm_preds <- predict(glm_model_org, 
+                      newdata = test_data, 
+                      type = "response")
+
+# Calculate the accuracy of the model
+glm_preds_acc <- ifelse(glm_preds > 0.5, 1, 0)
+
+```
+
+The summary of the logistic regression model fitted on the training data shows the following:
+
+The intercept has a negative estimate of -1.672e+01, which means that for a person with all predictor variables equal to zero, the log odds of having a stroke is -1.672e+01.
+
+Age has a positive estimate of 2.790178, which indicates that as age increases by one unit, the log odds of having a stroke increase by 2.790178.
+
+SysBP has a positive estimate of 0.015816, indicating that as systolic blood pressure increases by one unit, the log odds of having a stroke increase by 0.015816.
+
+The estimates for diaBP and BMI are not statistically significant, as their p-values are greater than 0.05.
+
+Overall, the model suggests that age and systolic blood pressure are significant predictors of stroke, while diastolic blood pressure and BMI are not significant predictors.
+
+```{r glm_model_vif, echo=TRUE}
+
+vif(glm_model_org)
+
+```
+
+
+The output of VIF (Variance Inflation Factor) provides an indication of the degree of multicollinearity in a regression model. 
+A VIF value of 1 indicates no multicollinearity, whereas higher values indicate increasing levels of multicollinearity. 
+In general, VIF values above 5 or 10 indicate a problematic level of multicollinearity.
+
+In this case, all VIF values are less than 5, which indicates that there is not a significant problem with multicollinearity in the model.
+
+```{r glm_model_evaluation_metrics, echo = TRUE}
+
+# create confusion matrix
+confusion_mat_glm_org <- confusionMatrix(factor(glm_preds_acc, levels = c(0, 1)), 
+                               factor(test_data$stroke, levels = c(0, 1)))
+
+# print the confusion matrix
+confusion_mat_glm_org$table
+
+# print accuracy
+accuracy <- confusion_mat_glm_org$overall['Accuracy']
+print(paste("Accuracy: ", round(accuracy, 4) * 100, "%"))
+
+# print precision
+precision <- confusion_mat_glm_org$byClass['Pos Pred Value']
+print(paste("Precision: ", round(precision, 4) * 100, "%"))
+
+# print recall (sensitivity)
+sensitivity <- confusion_mat_glm_org$byClass['Sensitivity']
+print(paste("Recall (Sensitivity): ", round(sensitivity, 4) * 100, "%"))
+
+# print specificity
+specificity <- confusion_mat_glm_org$byClass['Specificity']
+print(paste("Specificity: ", round(specificity, 4) * 100, "%"))
+
+# print F1 score
+f1_score <- 2 * (confusion_mat_glm_org$byClass['Pos Pred Value'] * confusion_mat_glm_org$byClass['Sensitivity']) / (confusion_mat_glm_org$byClass['Pos Pred Value'] + confusion_mat_glm_org$byClass['Sensitivity'])
+
+print(paste("F1 Score: ", round(f1_score, 4) * 100, "%"))
+
+```
+
+The accuracy of the logistic regression model on the test set is 85.44%. The precision of the model is 85.52%, meaning that out of all the predicted stroke cases, 85.52% are actually true positive cases. The recall (sensitivity) of the model is 99.72%, meaning that the model correctly identifies 99.72% of the actual positive cases. The specificity of the model is 5.7%, meaning that the model correctly identifies only 5.7% of the actual negative cases. The F1 score of the model is 92.08%, which is a weighted harmonic mean of the precision and recall. Overall, the model seems to perform well in identifying the actual stroke cases, but has a low specificity, meaning it incorrectly identifies a large number of negative cases as positive.
+
+```{r glm_model_AUC_curve, echo = TRUE}
+
+prob_glm <- predict(glm_model_org, 
+                test_data,
+                type = "response")
+
+ROC_glm <- roc(test_data$stroke, prob_glm)
+auc_val_glm <- auc(ROC_glm)
+
+plot(ROC_glm, 
+     print.auc = TRUE, 
+     print.auc.x = 0.5, 
+     print.auc.y = 0.2)
+
+```
+
+The confusion matrix shows the number of true positives, false positives, true negatives, and false negatives for the logistic regression model's predictions on the test data.
+
+True positives (TP): The model correctly predicted 3 cases with a stroke.
+False positives (FP): The model predicted 3 cases with a stroke, but in reality, those patients did not have a stroke.
+True negatives (TN): The model correctly predicted 1075 cases without a stroke.
+False negatives (FN): The model predicted 190 cases as not having a stroke, but they did have a stroke.
+
+
+Based on these values, we can compute several evaluation metrics:
+
+The logistic regression model for heart stroke prediction has an overall accuracy of 85.05%, meaning that it correctly predicts 85.05% of cases. 
+
+The precision of the model is 85.29%, which means that when the model predicts a positive outcome for a stroke, it is correct 85.29% of the time. 
+
+The recall (sensitivity) of the model is 99.54%, which means that the model correctly identifies 99.54% of true positive cases. 
+
+However, the specificity of the model is low, at 4.15%, indicating that it correctly identifies only 4.15% of true negative cases. 
+
+The F1 score of the model is 91.87%, which is a harmonic mean of precision and recall, and indicates the balance between them.
+
+Overall, the model is good at predicting positive outcomes but struggles with identifying negative ones. 
+
+This means that it performs well in identifying positive cases, but has a high rate of false positives, which could lead to misclassification of negative cases as positive.
+
+
+### Model building 2: Using step() for all variables
+```{r glm_full_model, echo = TRUE}
+
+# Fit a logistic regression full model to the training data
+glm_full_step_model <- glm(stroke ~ ., 
+                 family = binomial, 
+                 data = train_data_balanced)
+
+print(summary(glm_full_step_model))
+
+```
+
+
+```{r glm_full_model_step__model, echo = TRUE}
+
+# Perform stepwise regression using the "step" function
+# glm_full_step_model <- step(glm_full_model)
+
+print(summary(glm_full_step_model))
+
+# Make predictions on the testing data
+test_glm_full_preds <- predict(glm_full_step_model, 
+                      newdata = test_data, 
+                      type = "response")
+
+# Calculate the accuracy of the model
+glm_test_full_preds_acc <- ifelse(test_glm_full_preds > 0.5, 1, 0)
+
+```
+
+Based on the summary output, we can see that several variables are statistically significant in predicting stroke based on the p-values of their corresponding coefficients (i.e., have p-values less than 0.05). These variables are:
+
+gender
+age
+cigsPerDay
+prevalentStroke
+prevalentHyp
+sysBP
+glucose
+
+The coefficients of these variables have positive values which has a positive coefficient value, indicating that as the values of these variables increase, the likelihood of having a stroke also increases.
+
+However, we should note that some variables are not statistically significant, such as education, currentSmoker, BPMeds, diabetes, totChol, diaBP, BMI, and heartRate, as their p-values are greater than 0.05.
+
+```{r vif_glm_full_model, echo=TRUE}
+
+vif(glm_full_step_model)
+
+```
+
+From the VIF values, we can see that all the VIF values are below the commonly accepted threshold of 5, indicating that multicollinearity is not a major concern in this model.
+
+```{r glm_full_model_eval_metrics_org, echo = TRUE}
+
+# create confusion matrix
+confusion_mat_full_glm <- confusionMatrix(factor(glm_test_full_preds_acc, levels = c(0, 1)), 
+                               factor(test_data$stroke, levels = c(0, 1)))
+
+# print the confusion matrix
+confusion_mat_full_glm$table
+
+# print accuracy
+glm_full_model_accuracy <- confusion_mat_full_glm$overall['Accuracy']
+print(paste("Accuracy: ", round(glm_full_model_accuracy, 4) * 100, "%"))
+
+# print precision
+glm_full_model_precision <- confusion_mat_full_glm$byClass['Pos Pred Value']
+print(paste("Precision: ", round(glm_full_model_precision, 4) * 100, "%"))
+
+# print recall (sensitivity)
+glm_full_model_sensitivity <- confusion_mat_full_glm$byClass['Sensitivity']
+print(paste("Recall (Sensitivity): ", round(glm_full_model_sensitivity, 4) * 100, "%"))
+
+# print specificity
+glm_full_model_specificity <- confusion_mat_full_glm$byClass['Specificity']
+print(paste("Specificity: ", round(glm_full_model_specificity, 4) * 100, "%"))
+
+# print F1 score
+glm_full_model_f1_score <- 2 * (confusion_mat_full_glm$byClass['Pos Pred Value'] * confusion_mat_full_glm$byClass['Sensitivity']) / (confusion_mat_full_glm$byClass['Pos Pred Value'] + confusion_mat_full_glm$byClass['Sensitivity'])
+
+print(paste("F1 Score: ", round(glm_full_model_f1_score, 4) * 100, "%"))
+
+```
+
+
+### Model evaluation metrics and confusion metrics:
+Based on the metrics:
+
+From this confusion matrix, we can see that the model predicted 867 true negatives, 83 true positives, 211 false negatives, and 110 false positives.
+
+Accuracy: the proportion of correctly classified observations over the total number of observations. The accuracy of the full model is 74.74%, which means that 74.74% of the stroke cases were correctly classified.
+
+Precision: the proportion of true stroke cases over all predicted stroke cases. The precision of the full model is 88.78%, which means that 88.78% of the predicted stroke cases were actually stroke cases.
+
+Recall (Sensitivity): the proportion of true stroke cases over all actual stroke cases. The recall of the full model is 80.43%, which means that 80.43% of the actual stroke cases were correctly identified by the model.
+
+Specificity: the proportion of true non-stroke cases over all actual non-stroke cases. The specificity of the full model is 43.01%, which means that only 43.01% of the actual non-stroke cases were correctly identified by the model.
+
+F1 Score: the harmonic mean of precision and recall. The F1 score of the full model is 84.38%, which provides a balanced view of the model's performance in terms of both precision and recall.
+
+
+```{r glm_full_model_ROC_curve, echo = TRUE}
+
+prob_log_step_glm <- predict(glm_full_step_model, 
+                test_data,
+                type = "response")
+
+glm_ROC_log_step <- roc(test_data$stroke, prob_log_step_glm)
+auc_val_log_step_glm <- auc(glm_ROC_log_step)
+
+plot(glm_ROC_log_step, 
+     print.auc = TRUE, 
+     print.auc.x = 0.5, 
+     print.auc.y = 0.2)
+
+```
+
+## AUC-ROC Curve interpretation for logistic regression with step model
+
+An AUC of 0.5 indicates that the model is no better than random guessing, while an AUC of 1.0 indicates perfect predictive power.
+The AUC (Area Under the Curve) of the ROC (Receiver Operating Characteristic) curve is 0.7119, indicating that the model has a moderate ability to distinguish between stroke and non-stroke cases.
